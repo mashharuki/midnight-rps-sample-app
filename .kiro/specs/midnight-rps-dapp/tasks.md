@@ -22,7 +22,7 @@
 
 ## Task 2: ZK ビルドインフラ整備
 
-- [ ] 2.1 rps.compact をコンパイルして ZK キーを生成する
+- [x] 2.1 rps.compact をコンパイルして ZK キーを生成する
   - `compactc pkgs/contract/src/rps.compact` を実行し `pkgs/contract/src/managed/rps/` を生成
   - `pkgs/contract/src/managed/rps/contract/index.d.ts` に `commit` / `reveal` の回路型定義が存在すること
   - `pkgs/contract/src/managed/rps/keys/` に prover / verifier ファイルが存在すること
@@ -30,7 +30,7 @@
   - _Depends: Task 1_
   - _Boundary: pkgs/contract/src/managed/_
 
-- [ ] 2.2 sync-keys-rps スクリプトを追加する
+- [x] 2.2 sync-keys-rps スクリプトを追加する
   - ルートの `package.json` の `scripts` セクションに `"sync-keys-rps"` エントリを追加（`pkgs/contract/src/managed/rps/keys/` と `pkgs/contract/src/managed/rps/zkir/` を `pkgs/app/public/managed/rps/` 以下にコピーするコマンド）
   - `npm run sync-keys-rps` 実行後、`pkgs/app/public/managed/rps/keys/` と `pkgs/app/public/managed/rps/zkir/` が生成されること
   - ブラウザの `FetchZkConfigProvider` が `/managed/rps` 以下のキーファイルを取得できる状態になること

@@ -12,6 +12,7 @@
     "contract": "bun run --cwd pkgs/contract",
     "dev": "bun run --cwd pkgs/app dev",
     "sync-keys": "cp -Rf pkgs/contract/src/managed/counter/keys pkgs/app/public/managed/counter/ && cp -Rf pkgs/contract/src/managed/counter/zkir pkgs/app/public/managed/counter/",
+    "sync-keys-rps": "mkdir -p pkgs/app/public/managed/rps && cp -Rf pkgs/contract/src/managed/rps/keys pkgs/app/public/managed/rps/ && cp -Rf pkgs/contract/src/managed/rps/zkir pkgs/app/public/managed/rps/",
     "build": "bun run --cwd pkgs/contract build && bun run sync-keys && bun run --cwd pkgs/cli build && bun run --cwd pkgs/app build",
     "lint": "biome check .",
     "format": "biome format --write .",
