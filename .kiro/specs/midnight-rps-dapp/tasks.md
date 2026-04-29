@@ -105,7 +105,7 @@
 
 ## Task 6: useRpsGame フック実装
 
-- [ ] 6.1 useRpsGame.ts を作成する
+- [x] 6.1 useRpsGame.ts を作成する
   - `pkgs/app/src/hooks/useRpsGame.ts` を新規作成
   - `RpsStatus` 型と `UseRpsGameResult` インターフェース（8 状態: idle / joining / joined / committing / committed / revealing / finished / error）をデザイン仕様通りに実装
   - `subscribeToRpsState` の RxJS 購読ライフサイクル（`useRef` による subscription 管理・`unsubscribe`）を `useCounter` フックのパターンに準拠して実装
