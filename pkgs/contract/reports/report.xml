@@ -1,15 +1,1 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="1" failures="1" errors="0" time="0">
-    <testsuite name="src/test/counter.test.ts" timestamp="2026-04-29T02:59:59.932Z" hostname="kondouharuakiranoMacBook-Pro.local" tests="1" failures="1" errors="0" skipped="0" time="0">
-        <testcase classname="src/test/counter.test.ts" name="src/test/counter.test.ts" time="0">
-            <failure message="Cannot find package &apos;@midnight-ntwrk/compact-runtime&apos; imported from /Users/harukikondo/git/midnight-rps-sample-app/pkgs/contract/src/test/counter-simulator.ts" type="Error">
-Error: Cannot find package &apos;@midnight-ntwrk/compact-runtime&apos; imported from /Users/harukikondo/git/midnight-rps-sample-app/pkgs/contract/src/test/counter-simulator.ts
- ❯ src/test/counter-simulator.ts:16:1
- ❯ src/test/counter.test.ts:16:1
-
-⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
-Serialized Error: { code: &apos;ERR_MODULE_NOT_FOUND&apos; }
-            </failure>
-        </testcase>
-    </testsuite>
-</testsuites>

@@ -10,7 +10,7 @@
   - _Requirements: 1, 2, 3, 4_
   - _Boundary: pkgs/contract/src/_
 
-- [ ] 1.2 rps-witnesses.ts を作成する
+- [x] 1.2 rps-witnesses.ts を作成する
   - `pkgs/contract/src/rps-witnesses.ts` を新規作成
   - `RpsPrivateState` 型・`RpsPrivateStateId` 定数・`INITIAL_RPS_PRIVATE_STATE`（`secretKey` を `crypto.getRandomValues(32)` で初期化）・`rpsWitnesses` オブジェクト（4 witness 関数）をデザイン仕様通りに実装
   - `pkgs/contract/src/index.ts` に `export * as Rps from "./managed/rps/contract/index.js"` および `rpsWitnesses` / `RpsPrivateStateId` / `INITIAL_RPS_PRIVATE_STATE` / `RpsPrivateState` のエクスポートを追加
