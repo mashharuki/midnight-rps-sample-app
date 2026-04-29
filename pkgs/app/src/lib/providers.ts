@@ -1,5 +1,3 @@
-import { FALLBACK_URIS } from "@/utils/constants";
-import type { WalletConnectionResult } from "@/utils/types";
 import {
   type CoinPublicKey,
   type EncPublicKey,
@@ -17,12 +15,92 @@ import type {
   WalletProvider,
 } from "@midnight-ntwrk/midnight-js-types";
 import { fromHex, toHex } from "@midnight-ntwrk/midnight-js-utils";
+import { FALLBACK_URIS } from "@/utils/constants";
+import type { WalletConnectionResult } from "@/utils/types";
 import type { CounterCircuits, CounterProviders } from "./counter-types";
+import type { RpsCircuits, RpsProviders } from "./rps-types";
+import { RpsPrivateStateId } from "./rps-types";
 
 /**
  * Midnight プロバイダーチェーンを生成する。
  * Lace Wallet 接続情報を使い、ブラウザ環境に適したプロバイダーを構築する。
  */
+export function createRpsProviders(
+  connection: WalletConnectionResult,
+): RpsProviders {
+  const { wallet, uris, state } = connection;
+  const walletRaw = wallet as unknown as Record<string, unknown>;
+
+  const walletProvider: WalletProvider = {
+    getCoinPublicKey(): CoinPublicKey {
+      return state.coinPublicKey;
+    },
+    getEncryptionPublicKey(): EncPublicKey {
+      return state.encryptionPublicKey;
+    },
+    async balanceTx(
+      tx: UnboundTransaction,
+      _ttl?: Date | undefined,
+    ): Promise<FinalizedTransaction> {
+      if (typeof walletRaw.balanceUnsealedTransaction !== "function") {
+        throw new Error(
+          "Lace wallet does not support balanceUnsealedTransaction. Please update Lace wallet.",
+        );
+      }
+      const hexTx = toHex(tx.serialize());
+      const result = await (
+        walletRaw.balanceUnsealedTransaction as (
+          tx: string,
+        ) => Promise<{ tx: string }>
+      )(hexTx);
+      return LedgerTransaction.deserialize(
+        "signature",
+        "proof",
+        "binding",
+        new Uint8Array(fromHex(result.tx)),
+      ) as FinalizedTransaction;
+    },
+  };
+
+  const midnightProvider: MidnightProvider = {
+    async submitTx(tx: FinalizedTransaction): Promise<TransactionId> {
+      await (walletRaw.submitTransaction as (tx: string) => Promise<void>)(
+        toHex(tx.serialize()),
+      );
+      return tx.identifiers()[0];
+    },
+  };
+
+  const zkConfigProvider = new FetchZkConfigProvider<RpsCircuits>(
+    `${window.location.origin}/managed/rps`,
+    fetch.bind(window),
+  );
+
+  const proverServerUri = FALLBACK_URIS.proverServerUri;
+  console.log(
+    "[providers] Lace proverServerUri:",
+    uris.proverServerUri,
+    "→ using:",
+    proverServerUri,
+  );
+
+  return {
+    privateStateProvider: levelPrivateStateProvider({
+      privateStoragePasswordProvider: () => "midnight-counter-demo-app-2024",
+      accountId: state.coinPublicKey,
+      privateStateStoreName: RpsPrivateStateId,
+    }),
+    publicDataProvider: indexerPublicDataProvider(
+      uris.indexerUri,
+      uris.indexerWsUri,
+    ),
+    zkConfigProvider,
+    proofProvider: httpClientProofProvider(proverServerUri, zkConfigProvider),
+    walletProvider,
+    midnightProvider,
+  };
+}
+
 export function createCounterProviders(
   connection: WalletConnectionResult,
 ): CounterProviders {
@@ -83,7 +161,12 @@ export function createCounterProviders(
 
   // Force local Proof Server: Lace returns a remote preprod URL that blocks CORS from localhost
   const proverServerUri = FALLBACK_URIS.proverServerUri;
-  console.log("[providers] Lace proverServerUri:", uris.proverServerUri, "→ using:", proverServerUri);
+  console.log(
+    "[providers] Lace proverServerUri:",
+    uris.proverServerUri,
+    "→ using:",
+    proverServerUri,
+  );
 
   return {
     privateStateProvider: levelPrivateStateProvider({
@@ -100,4 +183,3 @@ export function createCounterProviders(
     midnightProvider,
   };
 }
-

@@ -54,7 +54,7 @@
 
 ## Task 4: アプリ API 層実装
 
-- [ ] 4.1 providers.ts に createRpsProviders() を追加する
+- [x] 4.1 providers.ts に createRpsProviders() を追加する
   - `pkgs/app/src/lib/providers.ts` を編集し `createRpsProviders()` 関数を追加
   - `FetchZkConfigProvider` のパスを `/managed/rps`、`privateStateProvider` の namespace を `RpsPrivateStateId` に設定
   - `createCounterProviders` との差分が zkConfigPath と namespace のみであること
@@ -63,7 +63,7 @@
   - _Depends: Task 3_
   - _Boundary: pkgs/app/src/lib/_
 
-- [ ] 4.2 rps.ts を作成する (P)
+- [x] 4.2 rps.ts を作成する (P)
   - `pkgs/app/src/lib/rps.ts` を新規作成
   - `joinRpsContract` / `deployRpsContract` / `setMyMove` / `commitMove` / `revealMove` / `getRpsLedgerState` / `subscribeToRpsState` を実装
   - `CompiledContract.make("rps", Rps.Contract).pipe(CompiledContract.withVacantWitnesses)` パターンで `rpsContractInstance` を生成
@@ -325,3 +325,5 @@
 
 - Task 1.1: コンパイラは 0.22.0 のため pragma を `<= 0.21` から `<= 0.22` に変更が必要。設計仕様の `<= 0.21` はコンパイラ更新前の記述。他のコントラクト（counter.compact）の pragma も同様に更新が必要な場合は確認すること。
 - Task 1.1: vitest はプロジェクトの node_modules に未インストール。`bun add -d vitest --cwd pkgs/contract` で追加済み。
+- Task 4.2: 設計の `withVacantWitnesses` は Counter（witnesses なし）のコピーミス。`rps.compact` は 4 つの witnesses を持つため `withWitnesses(rpsWitnesses)` が正しい。Task 1.2 の `rpsWitnesses` 実装参照。
+- Task 4.2: `rpsContractInstance` は `as any` キャストが必要（compact-js の `Contract<PS,W>` 型と `Move` enum vs number の型不一致のため）。`biome-ignore lint/suspicious/noExplicitAny` でそれぞれ抑制済み。
