@@ -42,7 +42,7 @@
 
 ## Task 3: 型定義ファイル作成
 
-- [ ] 3.1 rps-types.ts を作成する
+- [x] 3.1 rps-types.ts を作成する
   - `pkgs/app/src/lib/rps-types.ts` を新規作成
   - デザインの `rps-types.ts` セクションに従い、`RpsCircuits` / `RpsProviders` / `RpsContractInstance` / `DeployedRpsContract` / `RpsMove` / `RpsGameState` / `RpsGameResult` / `RpsLedgerState` を実装
   - `const enum` を使用し、`any` を一切使わないこと
