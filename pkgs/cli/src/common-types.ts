@@ -17,6 +17,7 @@ import { Counter, type CounterPrivateState } from '@midnight-ntwrk/counter-contr
 import type { MidnightProviders } from '@midnight-ntwrk/midnight-js/types';
 import type { DeployedContract, FoundContract } from '@midnight-ntwrk/midnight-js/contracts';
 import type { ProvableCircuitId } from '@midnight-ntwrk/compact-js';
+import { Rps, type RpsPrivateState } from 'contract';
 
 export type CounterCircuits = ProvableCircuitId<Counter.Contract<CounterPrivateState>>;
 
@@ -27,3 +28,13 @@ export type CounterProviders = MidnightProviders<CounterCircuits, typeof Counter
 export type CounterContract = Counter.Contract<CounterPrivateState>;
 
 export type DeployedCounterContract = DeployedContract<CounterContract> | FoundContract<CounterContract>;
+
+export const RpsPrivateStateId = 'rpsPrivateState' as const;
+
+export type RpsCircuits = ProvableCircuitId<Rps.Contract<RpsPrivateState>>;
+
+export type RpsProviders = MidnightProviders<RpsCircuits, typeof RpsPrivateStateId, RpsPrivateState>;
+
+export type DeployedRpsContract =
+  | DeployedContract<Rps.Contract<RpsPrivateState>>
+  | FoundContract<Rps.Contract<RpsPrivateState>>;

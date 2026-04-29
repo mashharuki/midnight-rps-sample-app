@@ -18,7 +18,7 @@ import { stdin as input, stdout as output } from 'node:process';
 import { createInterface, type Interface } from 'node:readline/promises';
 import { type Logger } from 'pino';
 import { type StartedDockerComposeEnvironment, type DockerComposeEnvironment } from 'testcontainers';
-import { type CounterProviders, type DeployedCounterContract } from './common-types';
+import { type CounterProviders, type DeployedCounterContract, type RpsProviders, type DeployedRpsContract } from './common-types';
 import { type Config, StandaloneConfig } from './config';
 import * as api from './api';
 
@@ -238,6 +238,182 @@ const mainLoop = async (providers: CounterProviders, walletCtx: api.WalletContex
   }
 };
 
+// ─── RPS Menus ─────────────────────────────────────────────────────────────
+
+const rpsContractMenu = (dustBalance: string) => `
+${DIVIDER}
+  RPS Contract Setup${dustBalance ? `               DUST: ${dustBalance}` : ''}
+${DIVIDER}
+  [1] Deploy a new RPS contract
+  [2] Join an existing RPS contract
+  [3] Monitor DUST balance
+  [4] Exit
+${'─'.repeat(62)}
+> `;
+
+const rpsActionsMenu = (address: string, dustBalance: string) => `
+${DIVIDER}
+  RPS Actions${dustBalance ? `                         DUST: ${dustBalance}` : ''}
+  Contract: ${address}
+${DIVIDER}
+  [1] Commit my move
+  [2] Reveal my move
+  [3] Show game state
+  [4] Exit
+${'─'.repeat(62)}
+> `;
+
+const MOVE_MENU = `
+${DIVIDER}
+  Select your move
+${DIVIDER}
+  [1] Rock     🪨
+  [2] Paper    🖐
+  [3] Scissors ✌️
+${'─'.repeat(62)}
+> `;
+
+const GAME_MENU = `
+${DIVIDER}
+  Select a game
+${DIVIDER}
+  [1] Counter  — classic counter example
+  [2] RPS      — rock-paper-scissors (ZK commit-reveal)
+  [3] Exit
+${'─'.repeat(62)}
+> `;
+
+/** Ask the user to select rock / paper / scissors. Returns 0 / 1 / 2. */
+const selectMove = async (rli: Interface): Promise<number | null> => {
+  while (true) {
+    const choice = await rli.question(MOVE_MENU);
+    switch (choice.trim()) {
+      case '1': return 0; // rock
+      case '2': return 1; // paper
+      case '3': return 2; // scissors
+      default:
+        console.log('  Invalid choice. Please enter 1, 2, or 3.');
+    }
+  }
+};
+
+/** Deploy or join an RPS contract. Returns the contract handle, or null if the user exits. */
+const deployOrJoinRps = async (
+  providers: RpsProviders,
+  walletCtx: api.WalletContext,
+  rli: Interface,
+): Promise<DeployedRpsContract | null> => {
+  while (true) {
+    const dustLabel = await getDustLabel(walletCtx.wallet);
+    const choice = await rli.question(rpsContractMenu(dustLabel));
+    switch (choice.trim()) {
+      case '1':
+        try {
+          const contract = await api.withStatus('Deploying RPS contract', () =>
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            api.deployRps(providers, { secretKey: (globalThis as any).crypto.getRandomValues(new Uint8Array(32)), myMove: null, mySalt: null }),
+          );
+          console.log(`  Contract deployed at: ${(contract as any).deployTxData.public.contractAddress}\n`);
+          return contract;
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.log(`\n  ✗ Deploy failed: ${msg}\n`);
+        }
+        break;
+      case '2':
+        try {
+          const contractAddress = await rli.question('Enter the RPS contract address (hex): ');
+          const contract = await api.withStatus('Joining RPS contract', () =>
+            api.joinRps(providers, contractAddress.trim()),
+          );
+          console.log(`  Joined contract at: ${(contract as any).deployTxData.public.contractAddress}\n`);
+          return contract;
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.log(`  ✗ Failed to join contract: ${msg}\n`);
+        }
+        break;
+      case '3':
+        await startDustMonitor(walletCtx.wallet, rli);
+        break;
+      case '4':
+        return null;
+      default:
+        console.log(`  Invalid choice: ${choice}`);
+    }
+  }
+};
+
+/** RPS main interaction loop after a contract is deployed/joined. */
+const rpsMainLoop = async (
+  providers: RpsProviders,
+  walletCtx: api.WalletContext,
+  rli: Interface,
+): Promise<void> => {
+  const rpsContract = await deployOrJoinRps(providers, walletCtx, rli);
+  if (rpsContract === null) return;
+
+  const contractAddress: string = (rpsContract as any).deployTxData.public.contractAddress;
+
+  while (true) {
+    const dustLabel = await getDustLabel(walletCtx.wallet);
+    const choice = await rli.question(rpsActionsMenu(contractAddress, dustLabel));
+    switch (choice.trim()) {
+      case '1': {
+        const move = await selectMove(rli);
+        if (move === null) break;
+        const moveNames = ['Rock', 'Paper', 'Scissors'];
+        try {
+          await api.withStatus(`Committing move (${moveNames[move]}) — generating ZK proof`, () =>
+            api.commitRps(providers, rpsContract, move),
+          );
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.log(`  ✗ Commit failed: ${msg}\n`);
+        }
+        break;
+      }
+      case '2':
+        try {
+          await api.withStatus('Revealing move — generating ZK proof', () =>
+            api.revealRps(rpsContract),
+          );
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.log(`  ✗ Reveal failed: ${msg}\n`);
+        }
+        break;
+      case '3':
+        try {
+          const state = await api.getRpsState(providers, contractAddress);
+          if (state == null) {
+            console.log('  No state found at this contract address.\n');
+          } else {
+            const stateNames = ['waiting', 'committed', 'finished'];
+            const resultNames = ['not_determined', 'player1_wins', 'player2_wins', 'draw'];
+            console.log(`
+  Game State:   ${stateNames[state.state] ?? state.state}
+  Game Over:    ${state.game_over}
+  P1 Joined:   ${state.p1_joined}
+  P2 Joined:   ${state.p2_joined}
+  P1 Revealed: ${state.p1_revealed}
+  P2 Revealed: ${state.p2_revealed}
+  Result:       ${resultNames[state.result] ?? state.result}
+`);
+          }
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          console.log(`  ✗ Failed to get state: ${msg}\n`);
+        }
+        break;
+      case '4':
+        return;
+      default:
+        console.log(`  Invalid choice: ${choice}`);
+    }
+  }
+};
+
 // ─── Docker Port Mapping ────────────────────────────────────────────────────
 
 /** Map a container's first exposed port into the config URL. */
@@ -291,12 +467,38 @@ export const run = async (config: Config, _logger: Logger, dockerEnv?: DockerCom
     }
 
     try {
-      // Step 3: Configure midnight-js providers
-      const providers = await api.withStatus('Configuring providers', () => api.configureProviders(walletCtx, config));
-      console.log('');
-
-      // Step 4: Enter the contract interaction loop
-      await mainLoop(providers, walletCtx, rli);
+      // Step 3: Choose game mode
+      let gamePicked = false;
+      while (!gamePicked) {
+        const gameChoice = await rli.question(GAME_MENU);
+        switch (gameChoice.trim()) {
+          case '1': {
+            // Counter flow
+            const providers = await api.withStatus('Configuring Counter providers', () =>
+              api.configureProviders(walletCtx, config),
+            );
+            console.log('');
+            await mainLoop(providers, walletCtx, rli);
+            gamePicked = true;
+            break;
+          }
+          case '2': {
+            // RPS flow
+            const providers = await api.withStatus('Configuring RPS providers', () =>
+              api.configureRpsProviders(walletCtx, config),
+            );
+            console.log('');
+            await rpsMainLoop(providers, walletCtx, rli);
+            gamePicked = true;
+            break;
+          }
+          case '3':
+            gamePicked = true;
+            break;
+          default:
+            console.log(`  Invalid choice: ${gameChoice}`);
+        }
+      }
     } catch (e) {
       if (e instanceof Error) {
         logger.error(`Error: ${e.message}`);

@@ -17,6 +17,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 import { type ContractAddress } from '@midnight-ntwrk/compact-runtime';
 import { Counter, type CounterPrivateState, witnesses } from '@midnight-ntwrk/counter-contract';
+import { Rps, rpsWitnesses, INITIAL_RPS_PRIVATE_STATE, type RpsPrivateState } from 'contract';
 import * as ledger from '@midnight-ntwrk/ledger-v8';
 import { unshieldedToken } from '@midnight-ntwrk/ledger-v8';
 import { deployContract, findDeployedContract } from '@midnight-ntwrk/midnight-js/contracts';
@@ -44,8 +45,13 @@ import {
   CounterPrivateStateId,
   type CounterProviders,
   type DeployedCounterContract,
+  type RpsCircuits,
+  RpsPrivateStateId,
+  type RpsProviders,
+  type DeployedRpsContract,
 } from './common-types';
-import { type Config, contractConfig } from './config';
+import path from 'node:path';
+import { type Config, contractConfig, currentDir } from './config';
 import { levelPrivateStateProvider } from '@midnight-ntwrk/midnight-js-level-private-state-provider';
 import { assertIsContractAddress, toHex } from '@midnight-ntwrk/midnight-js/utils';
 import { getNetworkId } from '@midnight-ntwrk/midnight-js/network-id';
@@ -619,3 +625,123 @@ export const monitorDustBalance = async (wallet: WalletFacade, stopSignal: Promi
 export function setLogger(_logger: Logger) {
   logger = _logger;
 }
+
+// ─── RPS ─────────────────────────────────────────────────────────────────────
+
+const rpsContractConfig = {
+  privateStateStoreName: 'rps-private-state',
+  zkConfigPath: path.resolve(currentDir, '..', '..', 'contract', 'src', 'managed', 'rps'),
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const rpsCompiledContract = (CompiledContract.make('rps', Rps.Contract as any) as any).pipe(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  CompiledContract.withWitnesses(rpsWitnesses as any),
+  CompiledContract.withCompiledFileAssets(rpsContractConfig.zkConfigPath),
+);
+
+/**
+ * Configure midnight-js providers for RPS contract interaction.
+ * Accepts an optional `accountId` to support multi-player scenarios where
+ * each player needs a separate LevelDB namespace for private state isolation.
+ */
+export const configureRpsProviders = async (
+  ctx: WalletContext,
+  config: Config,
+  accountId?: string,
+): Promise<RpsProviders> => {
+  const walletAndMidnightProvider = await createWalletAndMidnightProvider(ctx);
+  const effectiveAccountId = accountId ?? walletAndMidnightProvider.getCoinPublicKey();
+  const storagePassword = `${Buffer.from(effectiveAccountId, 'hex').toString('base64')}!`;
+  const zkConfigProvider = new NodeZkConfigProvider<RpsCircuits>(rpsContractConfig.zkConfigPath);
+  return {
+    privateStateProvider: levelPrivateStateProvider<typeof RpsPrivateStateId>({
+      privateStateStoreName: rpsContractConfig.privateStateStoreName,
+      accountId: effectiveAccountId,
+      privateStoragePasswordProvider: () => storagePassword,
+    }),
+    publicDataProvider: indexerPublicDataProvider(config.indexer, config.indexerWS),
+    zkConfigProvider,
+    proofProvider: httpClientProofProvider(config.proofServer, zkConfigProvider),
+    walletProvider: walletAndMidnightProvider,
+    midnightProvider: walletAndMidnightProvider,
+  };
+};
+
+export const deployRps = async (
+  providers: RpsProviders,
+  initialPrivateState: RpsPrivateState,
+): Promise<DeployedRpsContract> => {
+  logger.info('Deploying RPS contract...');
+  const rpsContract = await deployContract(providers, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    compiledContract: rpsCompiledContract as any,
+    privateStateId: RpsPrivateStateId,
+    initialPrivateState,
+  });
+  logger.info(`Deployed RPS contract at: ${rpsContract.deployTxData.public.contractAddress}`);
+  return rpsContract as unknown as DeployedRpsContract;
+};
+
+export const joinRps = async (
+  providers: RpsProviders,
+  contractAddress: string,
+): Promise<DeployedRpsContract> => {
+  assertIsContractAddress(contractAddress);
+  logger.info(`Joining RPS contract at: ${contractAddress}`);
+  const rpsContract = await findDeployedContract(providers, {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    contractAddress: contractAddress as any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    compiledContract: rpsCompiledContract as any,
+    privateStateId: RpsPrivateStateId,
+    initialPrivateState: INITIAL_RPS_PRIVATE_STATE,
+  });
+  logger.info(`Joined RPS contract at: ${rpsContract.deployTxData.public.contractAddress}`);
+  return rpsContract as unknown as DeployedRpsContract;
+};
+
+/**
+ * Commit a move. Updates private state with the chosen move and a random salt
+ * before calling the commit() circuit so that witness functions can read them.
+ */
+export const commitRps = async (
+  providers: RpsProviders,
+  contract: DeployedRpsContract,
+  move: number,
+): Promise<FinalizedTxData> => {
+  logger.info(`Committing move ${move}...`);
+  const salt = new Uint8Array(32);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).crypto.getRandomValues(salt);
+  const current = (await providers.privateStateProvider.get(RpsPrivateStateId)) ?? INITIAL_RPS_PRIVATE_STATE;
+  await providers.privateStateProvider.set(RpsPrivateStateId, { ...current, myMove: move, mySalt: salt });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const finalizedTxData = await (contract as any).callTx.commit();
+  logger.info(`Commit TX ${finalizedTxData.public.txId} added in block ${finalizedTxData.public.blockHeight}`);
+  return finalizedTxData.public as FinalizedTxData;
+};
+
+export const revealRps = async (contract: DeployedRpsContract): Promise<FinalizedTxData> => {
+  logger.info('Revealing move...');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const finalizedTxData = await (contract as any).callTx.reveal();
+  logger.info(`Reveal TX ${finalizedTxData.public.txId} added in block ${finalizedTxData.public.blockHeight}`);
+  return finalizedTxData.public as FinalizedTxData;
+};
+
+export const getRpsState = async (
+  providers: RpsProviders,
+  contractAddress: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any | null> => {
+  assertIsContractAddress(contractAddress);
+  logger.info('Checking RPS ledger state...');
+  const state = await providers.publicDataProvider
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .queryContractState(contractAddress as any)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .then((contractState) => (contractState != null ? Rps.ledger(contractState.data as any) : null));
+  logger.info(`RPS state: ${JSON.stringify(state, (_k, v) => (v instanceof Uint8Array ? `0x${Buffer.from(v).toString('hex').slice(0, 8)}...` : v))}`);
+  return state;
+};

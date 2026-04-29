@@ -76,7 +76,7 @@
 
 ## Task 5: CLI RPS 拡張（Task 4 と並行可）
 
-- [ ] 5.1 common-types.ts に RPS 型を追加する
+- [x] 5.1 common-types.ts に RPS 型を追加する
   - `pkgs/cli/src/common-types.ts` を編集し `RpsCircuits` / `RpsProviders` / `DeployedRpsContract` を追加
   - CLI の `@midnight-ntwrk/midnight-js/types` インポートパターン（既存 `CounterCircuits` 等と同一）に準拠すること
   - TypeScript コンパイルエラーなし
@@ -84,7 +84,7 @@
   - _Depends: Task 2.1_
   - _Boundary: pkgs/cli/src/_
 
-- [ ] 5.2 api.ts に RPS API 関数を追加する (P)
+- [x] 5.2 api.ts に RPS API 関数を追加する (P)
   - `pkgs/cli/src/api.ts` を編集し `deployRps` / `joinRps` / `commitRps` / `revealRps` / `getRpsState` を追加
   - `commitRps` では circuit 呼び出し前に `setMyMove()` で private state を更新するロジックを含むこと
   - 2 プレイヤー統合テストを想定し、プレイヤーごとに別 `accountId` を持つ独立した `providers` を構成できるようにすること（別 LevelDB namespace により P1/P2 の private state が分離される）
@@ -93,7 +93,7 @@
   - _Depends: Task 5.1_
   - _Boundary: pkgs/cli/src/_
 
-- [ ] 5.3 cli.ts に RPS インタラクティブメニューを追加する
+- [x] 5.3 cli.ts に RPS インタラクティブメニューを追加する
   - `pkgs/cli/src/cli.ts` を編集し RPS ゲーム操作メニュー（deploy / join / commit / reveal / state 取得）を追加
   - 既存 Counter メニューのフロー（wallet → deploy/join → actions）と同一パターンを踏襲すること
   - CLI を起動して RPS メニューが表示・選択できること
