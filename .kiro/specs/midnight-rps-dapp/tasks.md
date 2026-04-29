@@ -219,7 +219,107 @@
   - _Depends: Task 6_
   - _Boundary: pkgs/app/src/hooks/_
 
----
+## Task 10: UIデザインアップグレード
+- [] 10.1 UIデザインをアップグレードする
+  - 1. デザイントークン（最重要）
+    - Design Tokens 
+      Use these exact CSS variables (already in index.css):
+      ```css
+      --bg: #0a0a0f
+      --card: #12121a  
+      --border: #1e1e2e
+      --primary: #a855f7   /* violet — commit actions */
+      --cyan: #22d3ee      /* cyan — reveal actions, success states */
+      --fg: #f8fafc
+      --muted: #94a3b8
+      --radius: 14px
+      --sans: 'Geist Variable'
+      --mono: 'Geist Mono'
+      ```
+    - Card style:   
+      bg rgba(18,18,26,0.85) · backdrop-blur-24 · border 1px rgba(255,255,255,0.08) · border-radius 20px
+
+  - 2. コンポーネント仕様
+    - RPS UI Components
+      - MoveCard (Rock/Scissors/Paper selector)
+      - 3 equal-width flex cards in a row
+      - Selected state: colored border + background glow + checkmark badge (top-right)
+      - Colors per move: rock=#a855f7, scissors=#22d3ee, paper=#f472b6
+      - Hover: translateY(-2px) + box-shadow glow
+      - Disabled when ZK proof is generating
+    - ZK Commit State (during proof generation)
+      - Show selected move icon in a panel with purple border
+      - Animate a horizontal scan line (top→bottom, 1.5s loop) to convey "sealing"
+      - Show progress bar: linear-gradient(#a855f7 → #22d3ee) animating left→right
+      - Label: "Generating ZK Proof..." in monospace
+    - SealedMove (after commit, while waiting)
+      - Shield icon with "ZK" text inside
+      - Scan line animation (same as above, ongoing)
+      - Text: "Your move is sealed · commitment hash · ZK sealed" in mono
+    - OpponentStatus
+      - 3 states: waiting (gray dot) / committed (cyan check) / revealed (move icon in color)
+      - Animated dots when waiting
+    - RevealButton
+      - Cyan gradient: linear-gradient(#22d3ee, #0ea5e9) 
+      - Black text (not white) for contrast
+      - Only appears when BOTH players committed
+    - ResultDisplay
+      - Large colored banner (win=cyan, lose=pink, draw=cyan)
+      - Side-by-side P1 vs P2 move cards with "WINNER" label
+      - "Play Again" button in violet gradient
+
+  - 3. ゲームフロー＆ステート
+    - Game State Machine
+
+      ```ts
+      type GamePhase = 
+        | 'select'      // Choose rock/scissors/paper
+        | 'commit'      // ZK proof generating (3s)  
+        | 'committed'   // Waiting for opponent commit
+        | 'revealing'   // ZK reveal proof generating (3s)
+        | 'result'      // Show winner
+
+      type OpponentStatus = 'waiting' | 'committed' | 'revealed'
+      ```
+
+    - Phase Progress Bar
+      - 4 steps: Select → Commit → Reveal → Result
+        - Completed: cyan fill + checkmark
+        - Active: violet fill + number
+        - Inactive: dark fill + number
+
+    - Key UX Rules
+      - Commit button disabled until move selected
+      - Reveal button ONLY appears when opponentStatus === 'committed'
+      - All buttons disabled during ZK proof generation
+      - Chain polling indicator shown while waiting (spinner + mono text)
+      - Toast notifications: commitOk / revealOk / errors (bottom-right, 3.2s)
+
+  - 4. アニメーション指示
+    - Animations
+      - --zk-scan: position:absolute scan line, top:0%→100%, 1.5s ease-in-out infinite
+        background: linear-gradient(90deg, transparent, var(--primary), transparent)
+      - --progress-bar: width 0%→100% linear over 3s (ZK proof duration)
+      - --fadeInUp: opacity 0→1 + translateY(16px→0), 0.4s ease
+      - --star-twinkle: opacity 0.2→0.8→0.2, 2-5s per star (60 stars, fixed position)
+      - --float: translateY 0→-6px→0, 3s ease-in-out infinite (logo only)
+      - Toast: opacity 0 + translateY(16px) + scale(0.95) → 1/0/1, 0.3s ease
+
+  - 5. 実装優先度
+    - Implementation Priority
+      - P0 (must match design exactly):
+        - ZK scan line animation on commit/reveal states  
+        - Move card color system (rock/scissors/paper → purple/cyan/pink)
+        - Reveal button = cyan (not violet) — signals different action type
+        - SealedMove component (ongoing shield while waiting)
+      - P1 (important):
+        - Phase progress bar with correct active/done/pending states  
+        - Opponent status transitions (waiting→committed→revealed)
+        - Toast system bottom-right
+      - P2 (nice to have):
+        - Stars background
+        - Floating logo animation
+        - Glassmorphism blur on cards
 
 ## Implementation Notes
 
