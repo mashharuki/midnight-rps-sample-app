@@ -1,22 +1,22 @@
 {
   "feature_name": "midnight-rps-dapp",
   "created_at": "2026-04-29T00:00:00Z",
-  "updated_at": "2026-04-29T01:00:00Z",
+  "updated_at": "2026-04-29T03:00:00Z",
   "language": "ja",
-  "phase": "requirements-generated",
+  "phase": "tasks-generated",
   "approvals": {
     "requirements": {
       "generated": true,
-      "approved": false
+      "approved": true
     },
     "design": {
-      "generated": false,
-      "approved": false
+      "generated": true,
+      "approved": true
     },
     "tasks": {
-      "generated": false,
-      "approved": false
+      "generated": true,
+      "approved": true
     }
   },
-  "ready_for_implementation": false
+  "ready_for_implementation": true
 }
