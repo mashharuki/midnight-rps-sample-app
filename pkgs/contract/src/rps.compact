@@ -1,0 +1,102 @@
+pragma language_version >= 0.16 && <= 0.22;
+
+import CompactStandardLibrary;
+
+export enum GameState   { waiting, committed, finished }
+export enum Move        { rock, paper, scissors }
+export enum GameResult  { not_determined, player1_wins, player2_wins, draw }
+
+export ledger state:       GameState;
+export ledger game_over:   Boolean;
+export ledger p1_key:      Bytes<32>;
+export ledger p2_key:      Bytes<32>;
+export ledger p1_joined:   Boolean;
+export ledger p2_joined:   Boolean;
+export ledger p1_commit:   Bytes<32>;
+export ledger p2_commit:   Bytes<32>;
+export ledger p1_revealed: Boolean;
+export ledger p2_revealed: Boolean;
+export ledger p1_move:     Move;
+export ledger p2_move:     Move;
+export ledger result:      GameResult;
+
+witness local_secret_key():                       Bytes<32>;
+witness get_my_move():                            Move;
+witness get_my_salt():                            Bytes<32>;
+witness store_move_and_salt(m: Move, s: Bytes<32>): [];
+
+pure circuit derive_pk(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "rps:pk:v1"), sk]);
+}
+
+pure circuit make_commit(m: Move, salt: Bytes<32>): Bytes<32> {
+  const move_bytes = (m as Field) as Bytes<32>;
+  const move_hash  = persistentHash<Vector<1, Bytes<32>>>([move_bytes]);
+  return persistentHash<Vector<2, Bytes<32>>>([move_hash, salt]);
+}
+
+pure circuit who_wins(m1: Move, m2: Move): GameResult {
+  if (m1 == m2) { return GameResult.draw; }
+  if (m1 == Move.rock     && m2 == Move.scissors) { return GameResult.player1_wins; }
+  if (m1 == Move.scissors && m2 == Move.paper)    { return GameResult.player1_wins; }
+  if (m1 == Move.paper    && m2 == Move.rock)     { return GameResult.player1_wins; }
+  return GameResult.player2_wins;
+}
+
+export circuit commit(): [] {
+  assert(!game_over,                "Game is already over");
+  assert(state == GameState.waiting, "Not in waiting state");
+
+  const sk         = local_secret_key();
+  const pk         = derive_pk(sk);
+  const my_move    = get_my_move();
+  const my_salt    = get_my_salt();
+  const commitment = make_commit(my_move, my_salt);
+  store_move_and_salt(my_move, my_salt);
+
+  if (!p1_joined) {
+    p1_key    = disclose(pk);
+    p1_commit = disclose(commitment);
+    p1_joined = true;
+  } else {
+    assert(!p2_joined, "Both players already committed");
+    p2_key    = disclose(pk);
+    p2_commit = disclose(commitment);
+    p2_joined = true;
+    state     = GameState.committed;
+  }
+}
+
+export circuit reveal(): [] {
+  assert(!game_over,                   "Game is already over");
+  assert(state == GameState.committed, "Not in committed state");
+
+  const sk       = local_secret_key();
+  const pk       = derive_pk(sk);
+  const my_move  = get_my_move();
+  const my_salt  = get_my_salt();
+  const computed = make_commit(my_move, my_salt);
+
+  const is_p1 = disclose(p1_key == pk);
+  const is_p2 = disclose(p2_key == pk);
+  assert(is_p1 || is_p2, "Caller is not a registered player");
+
+  if (is_p1) {
+    assert(!p1_revealed, "Player 1 already revealed");
+    assert(disclose(computed == p1_commit), "Commitment mismatch for P1");
+    p1_move     = disclose(my_move);
+    p1_revealed = true;
+  }
+  if (is_p2) {
+    assert(!p2_revealed, "Player 2 already revealed");
+    assert(disclose(computed == p2_commit), "Commitment mismatch for P2");
+    p2_move     = disclose(my_move);
+    p2_revealed = true;
+  }
+
+  if (disclose(p1_revealed && p2_revealed)) {
+    result    = who_wins(p1_move, p2_move);
+    game_over = true;
+    state     = GameState.finished;
+  }
+}

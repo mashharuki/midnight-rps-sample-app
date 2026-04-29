@@ -2,7 +2,7 @@
 
 ## Task 1: Compact コントラクト実装
 
-- [ ] 1.1 rps.compact を作成する
+- [x] 1.1 rps.compact を作成する
   - `pkgs/contract/src/rps.compact` を新規作成
   - デザインのソースコード設計に従い、`GameState` / `Move` / `GameResult` enum、13 フィールドの `export ledger`、4 witness 宣言、`derive_pk` / `make_commit` / `who_wins` pure circuit、`commit()` / `reveal()` export circuit を実装
   - `pragma language_version >= 0.16 && <= 0.21` と `import CompactStandardLibrary` を先頭に記載
@@ -218,3 +218,10 @@
   - _Requirements: 5, 6, 7_
   - _Depends: Task 6_
   - _Boundary: pkgs/app/src/hooks/_
+
+---
+
+## Implementation Notes
+
+- Task 1.1: コンパイラは 0.22.0 のため pragma を `<= 0.21` から `<= 0.22` に変更が必要。設計仕様の `<= 0.21` はコンパイラ更新前の記述。他のコントラクト（counter.compact）の pragma も同様に更新が必要な場合は確認すること。
+- Task 1.1: vitest はプロジェクトの node_modules に未インストール。`bun add -d vitest --cwd pkgs/contract` で追加済み。

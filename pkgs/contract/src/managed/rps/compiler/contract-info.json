@@ -1,0 +1,96 @@
+{
+  "compiler-version": "0.30.0",
+  "language-version": "0.22.0",
+  "runtime-version": "0.15.0",
+  "circuits": [
+    {
+      "name": "commit",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    },
+    {
+      "name": "reveal",
+      "pure": false,
+      "proof": true,
+      "arguments": [
+      ],
+      "result-type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    }
+  ],
+  "witnesses": [
+    {
+      "name": "local_secret_key",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "get_my_move",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Enum",
+        "name": "Move",
+        "elements": [
+          "rock",
+          "paper",
+          "scissors"
+        ]
+      }
+    },
+    {
+      "name": "get_my_salt",
+      "arguments": [
+      ],
+      "result type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
+      "name": "store_move_and_salt",
+      "arguments": [
+        {
+          "name": "m",
+          "type": {
+            "type-name": "Enum",
+            "name": "Move",
+            "elements": [
+              "rock",
+              "paper",
+              "scissors"
+            ]
+          }
+        },
+        {
+          "name": "s",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result type": {
+        "type-name": "Tuple",
+        "types": [
+        ]
+      }
+    }
+  ],
+  "contracts": [
+  ]
+}
