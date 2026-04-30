@@ -1,8 +1,7 @@
-import type { CounterProviders } from "@/lib/counter-types";
 import type {
-    DAppConnectorWalletAPI,
-    DAppConnectorWalletState,
-    ServiceUriConfig,
+  DAppConnectorWalletAPI,
+  DAppConnectorWalletState,
+  ServiceUriConfig,
 } from "@midnight-ntwrk/dapp-connector-api";
 
 // ---------------------------------------------------------------------------
@@ -46,7 +45,7 @@ export type WalletConnectionResult = {
 export type WalletState =
   | { status: "disconnected" }
   | { status: "connecting" }
-  | { status: "connected"; connection: WalletConnectionResult; providers: CounterProviders }
+  | { status: "connected"; connection: WalletConnectionResult }
   | { status: "error" };
 
 export interface WalletContextValue {

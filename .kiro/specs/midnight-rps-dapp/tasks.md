@@ -119,7 +119,7 @@
 
 ## Task 7: UI コンポーネント実装
 
-- [ ] 7.1 MoveSelector.tsx を作成する (P)
+- [x] 7.1 MoveSelector.tsx を作成する (P)
   - `pkgs/app/src/components/RpsGame/MoveSelector.tsx` を新規作成
   - グー（🪨）・チョキ（✌️）・パー（🖐）の 3 ボタンを実装。選択中はハイライト表示し、`disabled=true` のとき操作不可
   - Props: `selectedMove: RpsMove | null`, `onSelect: (move: RpsMove) => void`, `disabled: boolean`
@@ -127,7 +127,7 @@
   - _Requirements: 5_
   - _Boundary: pkgs/app/src/components/RpsGame/_
 
-- [ ] 7.2 CommitButton.tsx を作成する (P)
+- [x] 7.2 CommitButton.tsx を作成する (P)
   - `pkgs/app/src/components/RpsGame/CommitButton.tsx` を新規作成
   - ZK 証明生成中は `Loader2` アイコン + ローディングテキストを表示し、ボタンを無効化
   - Props: `onCommit: () => void`, `disabled: boolean`, `isLoading: boolean`
@@ -135,21 +135,21 @@
   - _Requirements: 5_
   - _Boundary: pkgs/app/src/components/RpsGame/_
 
-- [ ] 7.3 RevealButton.tsx を作成する (P)
+- [x] 7.3 RevealButton.tsx を作成する (P)
   - `pkgs/app/src/components/RpsGame/RevealButton.tsx` を新規作成
   - ZK 証明生成中はローディング表示し、`disabled` のとき操作不可
   - Props: `onReveal: () => void`, `disabled: boolean`, `isLoading: boolean`
   - _Requirements: 7_
   - _Boundary: pkgs/app/src/components/RpsGame/_
 
-- [ ] 7.4 WaitingState.tsx を作成する (P)
+- [x] 7.4 WaitingState.tsx を作成する (P)
   - `pkgs/app/src/components/RpsGame/WaitingState.tsx` を新規作成
   - ゲーム状態（p1_joined / p2_joined / myRevealed）に応じて待機メッセージを切り替える 3 ケースを実装
   - Props: `ledgerState: RpsLedgerState`, `coinPublicKey: string`
   - _Requirements: 6_
   - _Boundary: pkgs/app/src/components/RpsGame/_
 
-- [ ] 7.5 ResultDisplay.tsx を作成する (P)
+- [x] 7.5 ResultDisplay.tsx を作成する (P)
   - `pkgs/app/src/components/RpsGame/ResultDisplay.tsx` を新規作成
   - 両者の手と最終結果（勝利 / 敗北 / 引き分け）を表示。i18n で日英対応
   - Props: `ledgerState: RpsLedgerState`, `coinPublicKey: string`
@@ -161,14 +161,14 @@
 
 ## Task 8: 統合・i18n・UI 組み立て
 
-- [ ] 8.1 i18n ロケールに RPS キーを追加する
+- [x] 8.1 i18n ロケールに RPS キーを追加する
   - `pkgs/app/src/i18n/locales/ja.ts` と `en.ts` に `rps.*` キーグループを追加
   - MoveSelector・CommitButton・RevealButton・WaitingState・ResultDisplay が使用するすべてのテキスト（手の名前・ローディングテキスト・待機メッセージ・勝利 / 敗北 / 引き分けメッセージ・エラーメッセージ）をカバーすること
   - i18next の型チェックがエラーなく通ること
   - _Requirements: 8_
   - _Boundary: pkgs/app/src/i18n/_
 
-- [ ] 8.2 RpsGame/index.tsx を作成する
+- [x] 8.2 RpsGame/index.tsx を作成する
   - `pkgs/app/src/components/RpsGame/index.tsx` を新規作成
   - `useRpsGame()` を呼び出し、`status` に応じて子コンポーネントを切り替えるロジックを実装（デザイン仕様の 7 ケース分岐に準拠）
   - contractAddress 入力フォーム + Join ボタン・エラーバナー + リトライを含む
@@ -177,7 +177,7 @@
   - _Depends: Task 7_
   - _Boundary: pkgs/app/src/components/RpsGame/_
 
-- [ ] 8.3 App.tsx に RpsGame セクションを追加する
+- [x] 8.3 App.tsx に RpsGame セクションを追加する
   - `pkgs/app/src/App.tsx` を編集し `<CounterSection />` の下に `<RpsGame />` を追加
   - `WalletContext` の `connected` 状態のときのみ RpsGame を表示（CounterSection と同じ条件分岐）
   - ブラウザで RpsGame セクションが `<CounterSection />` の下に表示されること
@@ -189,7 +189,7 @@
 
 ## Task 9: テスト
 
-- [ ] 9.1 コントラクトシミュレーターテストを作成する
+- [x] 9.1 コントラクトシミュレーターテストを作成する
   - `pkgs/contract/src/test/rps-simulator.ts` を新規作成（既存の `counter-simulator.ts` を雛形として参照）
   - `who_wins()` の 9 通りの手の組み合わせをすべてテスト（Req 3.1, 3.2）
   - `make_commit()` の hiding / binding 特性テスト（同じ move + salt → 同じ hash；異なる salt → 異なる hash）
@@ -199,7 +199,7 @@
   - _Depends: Task 1_
   - _Boundary: pkgs/contract/src/test/_
 
-- [ ] 9.2 CLI 統合テストを作成する
+- [x] 9.2 CLI 統合テストを作成する
   - `pkgs/cli/src/test/rps.api.test.ts` を新規作成（既存の `counter.api.test.ts` を雛形として参照）
   - testcontainers で `DockerComposeEnvironment`（`standalone.yml`）を起動し、2 プレイヤー（別 `accountId`）による完全ゲームフローを実行
   - P1: rock, P2: paper → `result = player2_wins` を検証（Req 3.1）
@@ -210,7 +210,7 @@
   - _Depends: Task 5_
   - _Boundary: pkgs/cli/src/test/_
 
-- [ ]* 9.3 useRpsGame フックの単体テストを作成する（オプション）
+- [x]* 9.3 useRpsGame フックの単体テストを作成する（オプション）
   - `pkgs/app/src/hooks/useRpsGame.test.ts` を新規作成
   - `renderHook` で idle → joining → joined → committing → committed → revealing → finished の状態遷移をテスト
   - `committing` 状態中は `status === "committing"` が true であり、commit ボタンが無効化されること（Req 5.3）
@@ -220,7 +220,7 @@
   - _Boundary: pkgs/app/src/hooks/_
 
 ## Task 10: UIデザインアップグレード
-- [] 10.1 UIデザインをアップグレードする
+- [x] 10.1 UIデザインをアップグレードする
   - 1. デザイントークン（最重要）
     - Design Tokens 
       Use these exact CSS variables (already in index.css):

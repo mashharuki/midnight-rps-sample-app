@@ -13,9 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { createLogger } from './logger-utils.js';
-import { run } from './cli.js';
-import { PreprodConfig } from './config.js';
+import { createLogger } from "./logger-utils.js";
+import { run } from "./cli.js";
+import { PreprodConfig } from "./config.js";
 
 const config = new PreprodConfig();
 const logger = await createLogger(config.logDir);

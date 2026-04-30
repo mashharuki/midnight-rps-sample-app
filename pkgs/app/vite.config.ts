@@ -15,7 +15,9 @@ const _require = createRequire(import.meta.url);
 // In Bun's module layout, onchain-runtime-v3 is nested inside compact-runtime's
 // Bun cache scope, so locate it from compact-runtime's package.json:
 //   pkg/package.json -> pkg/ -> @midnight-ntwrk/ -> node_modules/
-const _crPkgPath = _require.resolve("@midnight-ntwrk/compact-runtime/package.json");
+const _crPkgPath = _require.resolve(
+  "@midnight-ntwrk/compact-runtime/package.json",
+);
 const _crNodeModules = path.dirname(path.dirname(path.dirname(_crPkgPath)));
 const onchainRuntimeBrowserPath = path.join(
   _crNodeModules,
@@ -71,7 +73,9 @@ function reactBuildShimPlugin(): Plugin {
   // use-sync-external-store is used by react-i18next; resolve from its scope
   const rI18nDir = path.dirname(_require.resolve("react-i18next/package.json"));
   const rI18nRequire = createRequire(path.join(rI18nDir, "package.json"));
-  const usseDir = path.dirname(rI18nRequire.resolve("use-sync-external-store/package.json"));
+  const usseDir = path.dirname(
+    rI18nRequire.resolve("use-sync-external-store/package.json"),
+  );
 
   const REACT_ID = "\0virtual:react-build";
   const REACT_DOM_ID = "\0virtual:react-dom-build";
@@ -94,7 +98,10 @@ function reactBuildShimPlugin(): Plugin {
     },
     load(id) {
       if (id === REACT_ID) {
-        const cjsCode = fs.readFileSync(path.join(rDir, "cjs/react.production.js"), "utf-8");
+        const cjsCode = fs.readFileSync(
+          path.join(rDir, "cjs/react.production.js"),
+          "utf-8",
+        );
         return `
 var _r = {};
 (function(exports) {
@@ -117,7 +124,10 @@ export default _r;
 `;
       }
       if (id === REACT_DOM_ID) {
-        const cjsCode = fs.readFileSync(path.join(rdDir, "cjs/react-dom.production.js"), "utf-8");
+        const cjsCode = fs.readFileSync(
+          path.join(rdDir, "cjs/react-dom.production.js"),
+          "utf-8",
+        );
         return `
 import _react from "react";
 var _rd = {};
@@ -137,8 +147,14 @@ export default _rd;
 `;
       }
       if (id === REACT_DOM_CLIENT_ID) {
-        const schedCode = fs.readFileSync(path.join(schedDir, "cjs/scheduler.production.js"), "utf-8");
-        const cjsCode = fs.readFileSync(path.join(rdDir, "cjs/react-dom-client.production.js"), "utf-8");
+        const schedCode = fs.readFileSync(
+          path.join(schedDir, "cjs/scheduler.production.js"),
+          "utf-8",
+        );
+        const cjsCode = fs.readFileSync(
+          path.join(rdDir, "cjs/react-dom-client.production.js"),
+          "utf-8",
+        );
         return `
 import _react from "react";
 import _rd from "react-dom";
@@ -160,7 +176,10 @@ export default _rdc;
 `;
       }
       if (id === JSX_RUNTIME_ID) {
-        const cjsCode = fs.readFileSync(path.join(rDir, "cjs/react-jsx-runtime.production.js"), "utf-8");
+        const cjsCode = fs.readFileSync(
+          path.join(rDir, "cjs/react-jsx-runtime.production.js"),
+          "utf-8",
+        );
         return `
 import _react from "react";
 var _jsx = {};
@@ -175,7 +194,10 @@ export default _jsx;
 `;
       }
       if (id === JSX_DEV_RUNTIME_ID) {
-        const cjsCode = fs.readFileSync(path.join(rDir, "cjs/react-jsx-dev-runtime.production.js"), "utf-8");
+        const cjsCode = fs.readFileSync(
+          path.join(rDir, "cjs/react-jsx-dev-runtime.production.js"),
+          "utf-8",
+        );
         return `
 import _react from "react";
 var _jsxd = {};
@@ -190,7 +212,10 @@ export default _jsxd;
 `;
       }
       if (id === USSE_SHIM_ID) {
-        const cjsCode = fs.readFileSync(path.join(usseDir, "cjs/use-sync-external-store-shim.production.js"), "utf-8");
+        const cjsCode = fs.readFileSync(
+          path.join(usseDir, "cjs/use-sync-external-store-shim.production.js"),
+          "utf-8",
+        );
         return `
 import _react from "react";
 var _usse = {};
@@ -223,6 +248,14 @@ export default defineConfig({
     dedupe: ["react", "react-dom"],
     alias: [
       { find: "@", replacement: path.resolve(__dirname, "./src") },
+      // Ensure compact-runtime always resolves from app's node_modules regardless
+      // of which workspace package (contract/counter or contract/rps) imports it.
+      // Without this, Rollup can't find compact-runtime when resolving from
+      // pkgs/contract/dist/managed/*/contract/index.js in production builds.
+      {
+        find: "@midnight-ntwrk/compact-runtime",
+        replacement: path.dirname(_crPkgPath),
+      },
       // Node.js stdlib browser polyfills
       ...Object.entries(stdLibBrowser).map(([find, replacement]) => ({
         find,

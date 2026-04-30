@@ -43,17 +43,60 @@ const en = {
   toast: {
     copySuccess: "Address copied to clipboard",
   },
-  counter: {
-    title: "Counter Contract",
+  rps: {
+    title: "RPS Game (Rock-Paper-Scissors)",
     contractAddress: "Contract Address",
     addressPlaceholder: "Enter deployed contract address...",
-    join: "Join Contract",
+    join: "Join Game",
     joining: "Joining...",
-    increment: "Increment",
-    incrementing: "Incrementing...",
-    currentValue: "Current Value",
-    notJoined: "Enter a contract address above to join",
     error: "Error",
+    moves: {
+      rock: "Rock",
+      paper: "Paper",
+      scissors: "Scissors",
+    },
+    commit: {
+      button: "Commit Move",
+      loading: "Generating ZK Proof...",
+    },
+    reveal: {
+      button: "Reveal Move",
+      loading: "Generating ZK Proof...",
+    },
+    waiting: {
+      forOpponentCommit: "Waiting for opponent to commit...",
+      readyToReveal: "Both players committed. Time to reveal!",
+      bothCommitted: "Both players have committed their moves",
+      forOpponentReveal: "Waiting for opponent to reveal...",
+    },
+    phase: {
+      select: "Select",
+      commit: "Commit",
+      reveal: "Reveal",
+      result: "Result",
+    },
+    sealed: {
+      title: "Your move is sealed",
+      zkSealed: "ZK sealed · commitment on-chain",
+    },
+    opponent: {
+      label: "Opponent",
+      waiting: "Waiting to commit...",
+      committed: "Committed",
+    },
+    toast: {
+      commitOk: "Move committed successfully!",
+      revealOk: "Move revealed!",
+    },
+    result: {
+      win: "You Win! 🎉",
+      lose: "You Lose",
+      draw: "Draw! 🤝",
+      yourMove: "Your Move",
+      opponentMove: "Opponent's Move",
+      winner: "Winner!",
+      playAgain: "Play Again",
+    },
   },
 } as const;
 

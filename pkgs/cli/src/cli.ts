@@ -13,14 +13,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { type WalletContext } from './api';
-import { stdin as input, stdout as output } from 'node:process';
-import { createInterface, type Interface } from 'node:readline/promises';
-import { type Logger } from 'pino';
-import { type StartedDockerComposeEnvironment, type DockerComposeEnvironment } from 'testcontainers';
-import { type CounterProviders, type DeployedCounterContract, type RpsProviders, type DeployedRpsContract } from './common-types';
-import { type Config, StandaloneConfig } from './config';
-import * as api from './api';
+import { type WalletContext } from "./api";
+import { stdin as input, stdout as output } from "node:process";
+import { createInterface, type Interface } from "node:readline/promises";
+import { type Logger } from "pino";
+import {
+  type StartedDockerComposeEnvironment,
+  type DockerComposeEnvironment,
+} from "testcontainers";
+import { type RpsProviders, type DeployedRpsContract } from "./common-types";
+import { type Config, StandaloneConfig } from "./config";
+import * as api from "./api";
 
 let logger: Logger;
 
@@ -28,21 +31,23 @@ let logger: Logger;
  * This seed gives access to tokens minted in the genesis block of a local development node.
  * Only used in standalone networks to build a wallet with initial funds.
  */
-const GENESIS_MINT_WALLET_SEED = '0000000000000000000000000000000000000000000000000000000000000001';
+const GENESIS_MINT_WALLET_SEED =
+  "0000000000000000000000000000000000000000000000000000000000000001";
 
 // ─── Display Helpers ────────────────────────────────────────────────────────
 
 const BANNER = `
 ╔══════════════════════════════════════════════════════════════╗
 ║                                                              ║
-║              Midnight Counter Example                        ║
+║              Midnight RPS Example                            ║
 ║              ─────────────────────                           ║
-║              A privacy-preserving smart contract demo        ║
+║              Rock-Paper-Scissors with ZK commit-reveal       ║
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
 `;
 
-const DIVIDER = '──────────────────────────────────────────────────────────────';
+const DIVIDER =
+  "──────────────────────────────────────────────────────────────";
 
 // ─── Menu Helpers ──────────────────────────────────────────────────────────
 
@@ -53,37 +58,17 @@ ${DIVIDER}
   [1] Create a new wallet
   [2] Restore wallet from seed
   [3] Exit
-${'─'.repeat(62)}
-> `;
-
-/** Build the contract actions menu, showing current DUST balance in the header. */
-const contractMenu = (dustBalance: string) => `
-${DIVIDER}
-  Contract Actions${dustBalance ? `                    DUST: ${dustBalance}` : ''}
-${DIVIDER}
-  [1] Deploy a new counter contract
-  [2] Join an existing counter contract
-  [3] Monitor DUST balance
-  [4] Exit
-${'─'.repeat(62)}
-> `;
-
-/** Build the counter actions menu, showing current DUST balance in the header. */
-const counterMenu = (dustBalance: string) => `
-${DIVIDER}
-  Counter Actions${dustBalance ? `                     DUST: ${dustBalance}` : ''}
-${DIVIDER}
-  [1] Increment counter
-  [2] Display current counter value
-  [3] Exit
-${'─'.repeat(62)}
+${"─".repeat(62)}
 > `;
 
 // ─── Wallet Setup ───────────────────────────────────────────────────────────
 
 /** Prompt the user for a seed phrase and restore a wallet from it. */
-const buildWalletFromSeed = async (config: Config, rli: Interface): Promise<WalletContext> => {
-  const seed = await rli.question('Enter your wallet seed: ');
+const buildWalletFromSeed = async (
+  config: Config,
+  rli: Interface,
+): Promise<WalletContext> => {
+  const seed = await rli.question("Enter your wallet seed: ");
   return await api.buildWalletAndWaitForFunds(config, seed);
 };
 
@@ -92,20 +77,26 @@ const buildWalletFromSeed = async (config: Config, rli: Interface): Promise<Wall
  * - Standalone configs skip the menu and use the genesis seed automatically.
  * - All other configs present a menu to create or restore a wallet.
  */
-const buildWallet = async (config: Config, rli: Interface): Promise<WalletContext | null> => {
+const buildWallet = async (
+  config: Config,
+  rli: Interface,
+): Promise<WalletContext | null> => {
   // Standalone mode: use the pre-funded genesis wallet
   if (config instanceof StandaloneConfig) {
-    return await api.buildWalletAndWaitForFunds(config, GENESIS_MINT_WALLET_SEED);
+    return await api.buildWalletAndWaitForFunds(
+      config,
+      GENESIS_MINT_WALLET_SEED,
+    );
   }
 
   while (true) {
     const choice = await rli.question(WALLET_MENU);
     switch (choice.trim()) {
-      case '1':
+      case "1":
         return await api.buildFreshWallet(config);
-      case '2':
+      case "2":
         return await buildWalletFromSeed(config, rli);
-      case '3':
+      case "3":
         return null;
       default:
         logger.error(`Invalid choice: ${choice}`);
@@ -116,151 +107,57 @@ const buildWallet = async (config: Config, rli: Interface): Promise<WalletContex
 // ─── Contract Interaction ───────────────────────────────────────────────────
 
 /** Format dust balance for menu headers. */
-const getDustLabel = async (wallet: api.WalletContext['wallet']): Promise<string> => {
+const getDustLabel = async (
+  wallet: api.WalletContext["wallet"],
+): Promise<string> => {
   try {
     const dust = await api.getDustBalance(wallet);
     return dust.available.toLocaleString();
   } catch {
-    return '';
+    return "";
   }
-};
-
-/** Prompt for a contract address and join an existing deployed contract. */
-const joinContract = async (providers: CounterProviders, rli: Interface): Promise<DeployedCounterContract> => {
-  const contractAddress = await rli.question('Enter the contract address (hex): ');
-  return await api.joinContract(providers, contractAddress);
 };
 
 /**
  * Start the DUST monitor. Shows a live-updating balance display
  * that runs until the user presses Enter.
  */
-const startDustMonitor = async (wallet: api.WalletContext['wallet'], rli: Interface): Promise<void> => {
-  console.log('');
-  // Use readline question to wait for Enter — the monitor will render above this line
-  const stopPromise = rli.question('  Press Enter to return to menu...\n').then(() => {});
-  await api.monitorDustBalance(wallet, stopPromise);
-  console.log('');
-};
-
-/**
- * Deploy or join flow. Returns the contract handle, or null if the user exits.
- * Errors during deploy/join are caught and displayed — the user stays in the menu.
- */
-const deployOrJoin = async (
-  providers: CounterProviders,
-  walletCtx: api.WalletContext,
+const startDustMonitor = async (
+  wallet: api.WalletContext["wallet"],
   rli: Interface,
-): Promise<DeployedCounterContract | null> => {
-  while (true) {
-    const dustLabel = await getDustLabel(walletCtx.wallet);
-    const choice = await rli.question(contractMenu(dustLabel));
-    switch (choice.trim()) {
-      case '1':
-        try {
-          const contract = await api.withStatus('Deploying counter contract', () =>
-            api.deploy(providers, { privateCounter: 0 }),
-          );
-          console.log(`  Contract deployed at: ${contract.deployTxData.public.contractAddress}\n`);
-          return contract;
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          console.log(`\n  ✗ Deploy failed: ${msg}`);
-          // Log the full cause chain to help debug WASM/ledger errors
-          if (e instanceof Error && e.cause) {
-            let cause: unknown = e.cause;
-            let depth = 0;
-            while (cause && depth < 5) {
-              const causeMsg =
-                cause instanceof Error
-                  ? `${cause.message}\n      ${cause.stack?.split('\n').slice(1, 3).join('\n      ') ?? ''}`
-                  : String(cause);
-              console.log(`    cause: ${causeMsg}`);
-              cause = cause instanceof Error ? cause.cause : undefined;
-              depth++;
-            }
-          }
-          if (msg.toLowerCase().includes('dust') || msg.toLowerCase().includes('no dust')) {
-            console.log('    Insufficient DUST for transaction fees. Use option [3] to monitor your balance.');
-          }
-          console.log('');
-        }
-        break;
-      case '2':
-        try {
-          return await joinContract(providers, rli);
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          console.log(`  ✗ Failed to join contract: ${msg}\n`);
-        }
-        break;
-      case '3':
-        await startDustMonitor(walletCtx.wallet, rli);
-        break;
-      case '4':
-        return null;
-      default:
-        console.log(`  Invalid choice: ${choice}`);
-    }
-  }
-};
-
-/**
- * Main interaction loop. Once a contract is deployed/joined, the user
- * can increment the counter or query its current value.
- */
-const mainLoop = async (providers: CounterProviders, walletCtx: api.WalletContext, rli: Interface): Promise<void> => {
-  const counterContract = await deployOrJoin(providers, walletCtx, rli);
-  if (counterContract === null) {
-    return;
-  }
-
-  while (true) {
-    const dustLabel = await getDustLabel(walletCtx.wallet);
-    const choice = await rli.question(counterMenu(dustLabel));
-    switch (choice.trim()) {
-      case '1':
-        try {
-          await api.withStatus('Incrementing counter', () => api.increment(counterContract));
-        } catch (e) {
-          const msg = e instanceof Error ? e.message : String(e);
-          console.log(`  ✗ Increment failed: ${msg}\n`);
-        }
-        break;
-      case '2':
-        await api.displayCounterValue(providers, counterContract);
-        break;
-      case '3':
-        return;
-      default:
-        console.log(`  Invalid choice: ${choice}`);
-    }
-  }
+): Promise<void> => {
+  console.log("");
+  // Use readline question to wait for Enter — the monitor will render above this line
+  const stopPromise = rli
+    .question("  Press Enter to return to menu...\n")
+    .then(() => {});
+  await api.monitorDustBalance(wallet, stopPromise);
+  console.log("");
 };
 
 // ─── RPS Menus ─────────────────────────────────────────────────────────────
 
 const rpsContractMenu = (dustBalance: string) => `
 ${DIVIDER}
-  RPS Contract Setup${dustBalance ? `               DUST: ${dustBalance}` : ''}
+  RPS Contract Setup${dustBalance ? `               DUST: ${dustBalance}` : ""}
 ${DIVIDER}
   [1] Deploy a new RPS contract
   [2] Join an existing RPS contract
   [3] Monitor DUST balance
   [4] Exit
-${'─'.repeat(62)}
+${"─".repeat(62)}
 > `;
 
 const rpsActionsMenu = (address: string, dustBalance: string) => `
 ${DIVIDER}
-  RPS Actions${dustBalance ? `                         DUST: ${dustBalance}` : ''}
+  RPS Actions${dustBalance ? `                         DUST: ${dustBalance}` : ""}
   Contract: ${address}
 ${DIVIDER}
   [1] Commit my move
   [2] Reveal my move
   [3] Show game state
   [4] Exit
-${'─'.repeat(62)}
+${"─".repeat(62)}
 > `;
 
 const MOVE_MENU = `
@@ -270,17 +167,7 @@ ${DIVIDER}
   [1] Rock     🪨
   [2] Paper    🖐
   [3] Scissors ✌️
-${'─'.repeat(62)}
-> `;
-
-const GAME_MENU = `
-${DIVIDER}
-  Select a game
-${DIVIDER}
-  [1] Counter  — classic counter example
-  [2] RPS      — rock-paper-scissors (ZK commit-reveal)
-  [3] Exit
-${'─'.repeat(62)}
+${"─".repeat(62)}
 > `;
 
 /** Ask the user to select rock / paper / scissors. Returns 0 / 1 / 2. */
@@ -288,11 +175,14 @@ const selectMove = async (rli: Interface): Promise<number | null> => {
   while (true) {
     const choice = await rli.question(MOVE_MENU);
     switch (choice.trim()) {
-      case '1': return 0; // rock
-      case '2': return 1; // paper
-      case '3': return 2; // scissors
+      case "1":
+        return 0; // rock
+      case "2":
+        return 1; // paper
+      case "3":
+        return 2; // scissors
       default:
-        console.log('  Invalid choice. Please enter 1, 2, or 3.');
+        console.log("  Invalid choice. Please enter 1, 2, or 3.");
     }
   }
 };
@@ -307,36 +197,48 @@ const deployOrJoinRps = async (
     const dustLabel = await getDustLabel(walletCtx.wallet);
     const choice = await rli.question(rpsContractMenu(dustLabel));
     switch (choice.trim()) {
-      case '1':
+      case "1":
         try {
-          const contract = await api.withStatus('Deploying RPS contract', () =>
+          const contract = await api.withStatus("Deploying RPS contract", () =>
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            api.deployRps(providers, { secretKey: (globalThis as any).crypto.getRandomValues(new Uint8Array(32)), myMove: null, mySalt: null }),
+            api.deployRps(providers, {
+              secretKey: (globalThis as any).crypto.getRandomValues(
+                new Uint8Array(32),
+              ),
+              myMove: null,
+              mySalt: null,
+            }),
           );
-          console.log(`  Contract deployed at: ${(contract as any).deployTxData.public.contractAddress}\n`);
+          console.log(
+            `  Contract deployed at: ${(contract as any).deployTxData.public.contractAddress}\n`,
+          );
           return contract;
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
           console.log(`\n  ✗ Deploy failed: ${msg}\n`);
         }
         break;
-      case '2':
+      case "2":
         try {
-          const contractAddress = await rli.question('Enter the RPS contract address (hex): ');
-          const contract = await api.withStatus('Joining RPS contract', () =>
+          const contractAddress = await rli.question(
+            "Enter the RPS contract address (hex): ",
+          );
+          const contract = await api.withStatus("Joining RPS contract", () =>
             api.joinRps(providers, contractAddress.trim()),
           );
-          console.log(`  Joined contract at: ${(contract as any).deployTxData.public.contractAddress}\n`);
+          console.log(
+            `  Joined contract at: ${(contract as any).deployTxData.public.contractAddress}\n`,
+          );
           return contract;
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
           console.log(`  ✗ Failed to join contract: ${msg}\n`);
         }
         break;
-      case '3':
+      case "3":
         await startDustMonitor(walletCtx.wallet, rli);
         break;
-      case '4':
+      case "4":
         return null;
       default:
         console.log(`  Invalid choice: ${choice}`);
@@ -353,19 +255,23 @@ const rpsMainLoop = async (
   const rpsContract = await deployOrJoinRps(providers, walletCtx, rli);
   if (rpsContract === null) return;
 
-  const contractAddress: string = (rpsContract as any).deployTxData.public.contractAddress;
+  const contractAddress: string = (rpsContract as any).deployTxData.public
+    .contractAddress;
 
   while (true) {
     const dustLabel = await getDustLabel(walletCtx.wallet);
-    const choice = await rli.question(rpsActionsMenu(contractAddress, dustLabel));
+    const choice = await rli.question(
+      rpsActionsMenu(contractAddress, dustLabel),
+    );
     switch (choice.trim()) {
-      case '1': {
+      case "1": {
         const move = await selectMove(rli);
         if (move === null) break;
-        const moveNames = ['Rock', 'Paper', 'Scissors'];
+        const moveNames = ["Rock", "Paper", "Scissors"];
         try {
-          await api.withStatus(`Committing move (${moveNames[move]}) — generating ZK proof`, () =>
-            api.commitRps(providers, rpsContract, move),
+          await api.withStatus(
+            `Committing move (${moveNames[move]}) — generating ZK proof`,
+            () => api.commitRps(providers, rpsContract, move),
           );
         } catch (e) {
           const msg = e instanceof Error ? e.message : String(e);
@@ -373,9 +279,9 @@ const rpsMainLoop = async (
         }
         break;
       }
-      case '2':
+      case "2":
         try {
-          await api.withStatus('Revealing move — generating ZK proof', () =>
+          await api.withStatus("Revealing move — generating ZK proof", () =>
             api.revealRps(rpsContract),
           );
         } catch (e) {
@@ -383,14 +289,19 @@ const rpsMainLoop = async (
           console.log(`  ✗ Reveal failed: ${msg}\n`);
         }
         break;
-      case '3':
+      case "3":
         try {
           const state = await api.getRpsState(providers, contractAddress);
           if (state == null) {
-            console.log('  No state found at this contract address.\n');
+            console.log("  No state found at this contract address.\n");
           } else {
-            const stateNames = ['waiting', 'committed', 'finished'];
-            const resultNames = ['not_determined', 'player1_wins', 'player2_wins', 'draw'];
+            const stateNames = ["waiting", "committed", "finished"];
+            const resultNames = [
+              "not_determined",
+              "player1_wins",
+              "player2_wins",
+              "draw",
+            ];
             console.log(`
   Game State:   ${stateNames[state.state] ?? state.state}
   Game Over:    ${state.game_over}
@@ -406,7 +317,7 @@ const rpsMainLoop = async (
           console.log(`  ✗ Failed to get state: ${msg}\n`);
         }
         break;
-      case '4':
+      case "4":
         return;
       default:
         console.log(`  Invalid choice: ${choice}`);
@@ -417,11 +328,15 @@ const rpsMainLoop = async (
 // ─── Docker Port Mapping ────────────────────────────────────────────────────
 
 /** Map a container's first exposed port into the config URL. */
-const mapContainerPort = (env: StartedDockerComposeEnvironment, url: string, containerName: string) => {
+const mapContainerPort = (
+  env: StartedDockerComposeEnvironment,
+  url: string,
+  containerName: string,
+) => {
   const mappedUrl = new URL(url);
   const container = env.getContainer(containerName);
   mappedUrl.port = String(container.getFirstMappedPort());
-  return mappedUrl.toString().replace(/\/+$/, '');
+  return mappedUrl.toString().replace(/\/+$/, "");
 };
 
 // ─── Entry Point ────────────────────────────────────────────────────────────
@@ -433,10 +348,14 @@ const mapContainerPort = (env: StartedDockerComposeEnvironment, url: string, con
  *   1. (Optional) Start Docker containers for proof server / node / indexer
  *   2. Build or restore a wallet and wait for it to be funded
  *   3. Configure midnight-js providers (proof server, indexer, wallet, private state)
- *   4. Enter the contract deploy/join and counter interaction loop
+ *   4. Enter the RPS contract deploy/join and interaction loop
  *   5. Clean up: close wallet, readline, and docker environment
  */
-export const run = async (config: Config, _logger: Logger, dockerEnv?: DockerComposeEnvironment): Promise<void> => {
+export const run = async (
+  config: Config,
+  _logger: Logger,
+  dockerEnv?: DockerComposeEnvironment,
+): Promise<void> => {
   logger = _logger;
   api.setLogger(_logger);
 
@@ -453,10 +372,18 @@ export const run = async (config: Config, _logger: Logger, dockerEnv?: DockerCom
 
       // In standalone mode, remap ports to the dynamically assigned container ports
       if (config instanceof StandaloneConfig) {
-        config.indexer = mapContainerPort(env, config.indexer, 'counter-indexer');
-        config.indexerWS = mapContainerPort(env, config.indexerWS, 'counter-indexer');
-        config.node = mapContainerPort(env, config.node, 'counter-node');
-        config.proofServer = mapContainerPort(env, config.proofServer, 'counter-proof-server');
+        config.indexer = mapContainerPort(env, config.indexer, "rps-indexer");
+        config.indexerWS = mapContainerPort(
+          env,
+          config.indexerWS,
+          "rps-indexer",
+        );
+        config.node = mapContainerPort(env, config.node, "rps-node");
+        config.proofServer = mapContainerPort(
+          env,
+          config.proofServer,
+          "rps-proof-server",
+        );
       }
     }
 
@@ -467,38 +394,12 @@ export const run = async (config: Config, _logger: Logger, dockerEnv?: DockerCom
     }
 
     try {
-      // Step 3: Choose game mode
-      let gamePicked = false;
-      while (!gamePicked) {
-        const gameChoice = await rli.question(GAME_MENU);
-        switch (gameChoice.trim()) {
-          case '1': {
-            // Counter flow
-            const providers = await api.withStatus('Configuring Counter providers', () =>
-              api.configureProviders(walletCtx, config),
-            );
-            console.log('');
-            await mainLoop(providers, walletCtx, rli);
-            gamePicked = true;
-            break;
-          }
-          case '2': {
-            // RPS flow
-            const providers = await api.withStatus('Configuring RPS providers', () =>
-              api.configureRpsProviders(walletCtx, config),
-            );
-            console.log('');
-            await rpsMainLoop(providers, walletCtx, rli);
-            gamePicked = true;
-            break;
-          }
-          case '3':
-            gamePicked = true;
-            break;
-          default:
-            console.log(`  Invalid choice: ${gameChoice}`);
-        }
-      }
+      // Step 3: Configure RPS providers and start game loop
+      const providers = await api.withStatus("Configuring RPS providers", () =>
+        api.configureRpsProviders(walletCtx, config),
+      );
+      console.log("");
+      await rpsMainLoop(providers, walletCtx, rli);
     } catch (e) {
       if (e instanceof Error) {
         logger.error(`Error: ${e.message}`);
@@ -527,6 +428,6 @@ export const run = async (config: Config, _logger: Logger, dockerEnv?: DockerCom
       }
     }
 
-    logger.info('Goodbye.');
+    logger.info("Goodbye.");
   }
 };

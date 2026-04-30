@@ -10,6 +10,7 @@ import { INITIAL_RPS_PRIVATE_STATE, Rps, rpsWitnesses } from "contract";
 import * as Rx from "rxjs";
 import type {
   DeployedRpsContract,
+  RpsContractInstance,
   RpsLedgerState,
   RpsMove,
   RpsProviders,
@@ -17,18 +18,21 @@ import type {
 import { RpsPrivateStateId } from "./rps-types";
 
 // rps.compact declares 4 witnesses — withWitnesses registers the TypeScript implementations.
-// withVacantWitnesses is NOT used (unlike Counter) because RPS has 4 required witnesses.
-export const rpsContractInstance = (
-  CompactJs.CompiledContract.make(
-    "rps",
-    // biome-ignore lint/suspicious/noExplicitAny: Rps.Contract class constructor type not externally accessible
-    Rps.Contract as any,
-    // biome-ignore lint/suspicious/noExplicitAny: .pipe() requires any to resolve generic chain
-  ) as any
-).pipe(
-  // biome-ignore lint/suspicious/noExplicitAny: rpsWitnesses WitnessCtx matches WitnessContext structurally; Move numeric type safe
-  CompactJs.CompiledContract.withWitnesses(rpsWitnesses as any),
-);
+// TypeScript 6.0 resolves the conditional `witnesses` parameter type to `never` when the
+// contract generic cannot be determined from an `any` base — `any` is no longer assignable
+// to `never` in TS6.  Casting `withWitnesses` itself to `any` bypasses the conditional-type
+// check while preserving the correct runtime behaviour.
+// biome-ignore lint/suspicious/noExplicitAny: Rps.Contract class constructor type not externally accessible
+const _rpsBase = CompactJs.CompiledContract.make(
+  "rps",
+  Rps.Contract as any,
+) as any;
+export const rpsContractInstance: RpsContractInstance =
+  // biome-ignore lint/suspicious/noExplicitAny: bypass TS6 never-assignability of conditional witness param
+  (CompactJs.CompiledContract.withWitnesses as any)(
+    _rpsBase,
+    rpsWitnesses,
+  ) as unknown as RpsContractInstance;
 
 const INITIAL_PRIVATE_STATE: RpsPrivateState = INITIAL_RPS_PRIVATE_STATE;
 
@@ -53,6 +57,7 @@ export const deployRpsContract = async (
     compiledContract: rpsContractInstance as any,
     privateStateId: RpsPrivateStateId,
     initialPrivateState: INITIAL_PRIVATE_STATE,
+    args: [],
   }) as unknown as Promise<DeployedRpsContract>;
 };
 

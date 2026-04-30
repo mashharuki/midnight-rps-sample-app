@@ -14,12 +14,23 @@
 // limitations under the License.
 
 import { defineConfig } from "vitest/config";
+import path from "node:path";
+
+// Bun workspaces store packages under node_modules/.bun/<pkg>@<ver>/node_modules/<pkg>.
+// Vitest (Vite) can't auto-discover them, so we map each @midnight-ntwrk/* package
+// to its physical location in the bun cache.
+const BUN = path.resolve(__dirname, "../../node_modules/.bun");
+
+function bunPkg(name: string, version: string): string {
+  const key = name.replace("/", "+");
+  return path.join(BUN, `${key}@${version}`, "node_modules", name);
+}
 
 export default defineConfig({
   mode: "node",
   test: {
     deps: {
-      interopDefault: true
+      interopDefault: true,
     },
     globals: true,
     environment: "node",
@@ -33,13 +44,27 @@ export default defineConfig({
         branches: 50,
         functions: 73,
         lines: 72,
-        statements: -269
-      }
+        statements: -269,
+      },
     },
-    reporters: ["default", ["junit", { outputFile: "reports/report.xml" }]]
+    reporters: ["default", ["junit", { outputFile: "reports/report.xml" }]],
   },
   resolve: {
     extensions: [".ts", ".js"],
-    conditions: ["import", "node", "default"]
-  }
+    conditions: ["import", "node", "default"],
+    alias: {
+      "@midnight-ntwrk/compact-runtime": bunPkg(
+        "@midnight-ntwrk/compact-runtime",
+        "0.15.0",
+      ),
+      "@midnight-ntwrk/midnight-js-network-id": bunPkg(
+        "@midnight-ntwrk/midnight-js-network-id",
+        "4.0.4",
+      ),
+      "@midnight-ntwrk/onchain-runtime-v3": bunPkg(
+        "@midnight-ntwrk/onchain-runtime-v3",
+        "3.0.0",
+      ),
+    },
+  },
 });

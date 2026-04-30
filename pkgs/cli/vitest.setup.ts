@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import protobuf from 'protobufjs';
-import Long from 'long';
+import protobuf from "protobufjs";
+import Long from "long";
 
 protobuf.util.Long = Long;
 protobuf.configure();

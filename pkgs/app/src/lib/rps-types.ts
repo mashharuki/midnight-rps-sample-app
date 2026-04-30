@@ -20,14 +20,17 @@ export type RpsProviders = MidnightProviders<
   RpsPrivateState
 >;
 
+// biome-ignore lint/suspicious/noExplicitAny: contract generic opaque (mirrors counter-types.ts pattern)
 export type RpsContractInstance = CompiledContract.CompiledContract<
-  RpsCircuits,
+  any,
   RpsPrivateState
 >;
 
 export type DeployedRpsContract =
-  | DeployedContract<RpsCircuits>
-  | FoundContract<RpsCircuits>;
+  // biome-ignore lint/suspicious/noExplicitAny: see RpsContractInstance
+  | DeployedContract<any>
+  // biome-ignore lint/suspicious/noExplicitAny: see RpsContractInstance
+  | FoundContract<any>;
 
 // `const enum` is disallowed by erasableSyntaxOnly: true (app tsconfig).
 // Using `as const` object + union type — identical semantics at runtime.

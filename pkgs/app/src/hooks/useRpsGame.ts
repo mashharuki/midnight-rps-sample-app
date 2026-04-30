@@ -7,7 +7,11 @@ import {
   setMyMove,
   subscribeToRpsState,
 } from "@/lib/rps";
-import type { DeployedRpsContract, RpsLedgerState, RpsMove } from "@/lib/rps-types";
+import type {
+  DeployedRpsContract,
+  RpsLedgerState,
+  RpsMove,
+} from "@/lib/rps-types";
 import { RpsGameState } from "@/lib/rps-types";
 import type { ContractAddress } from "@midnight-ntwrk/compact-runtime";
 import {
@@ -44,6 +48,7 @@ export interface UseRpsGameResult {
   selectMove: (move: RpsMove) => void;
   commit: () => Promise<void>;
   reveal: () => Promise<void>;
+  reset: () => void;
 }
 
 export function useRpsGame(): UseRpsGameResult {
@@ -145,6 +150,16 @@ export function useRpsGame(): UseRpsGameResult {
     }
   }, [providers, deployedContract, selectedMove, status]);
 
+  const reset = useCallback(() => {
+    subscriptionRef.current?.unsubscribe();
+    subscriptionRef.current = null;
+    setDeployedContract(null);
+    setLedgerState(null);
+    setSelectedMove(null);
+    setStatus("idle");
+    setError(null);
+  }, []);
+
   const reveal = useCallback(async () => {
     if (!deployedContract) return;
 
@@ -202,5 +217,6 @@ export function useRpsGame(): UseRpsGameResult {
     selectMove,
     commit,
     reveal,
+    reset,
   };
 }

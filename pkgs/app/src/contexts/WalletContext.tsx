@@ -1,4 +1,3 @@
-import { createCounterProviders } from "@/lib/providers";
 import {
   connectToWallet,
   NetworkMismatchError,
@@ -45,8 +44,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
     try {
       // 接続
       const connection = await connectToWallet();
-      const providers = createCounterProviders(connection);
-      setState({ status: "connected", connection, providers });
+      setState({ status: "connected", connection });
     } catch (e: unknown) {
       setState({ status: "error" });
       if (e instanceof WalletNotFoundError) {

@@ -26,11 +26,12 @@
     "@midnight-ntwrk/midnight-js-types": "4.0.4",
     "@midnight-ntwrk/midnight-js-utils": "4.0.4",
     "@midnight-ntwrk/wallet-api": "5.0.0",
+    "@midnight-ntwrk/wallet-sdk-address-format": "^3.1.1",
     "@midnight-ntwrk/zswap": "^4.0.0",
-    "contract": "workspace:*",
     "@tailwindcss/vite": "^4.2.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "contract": "workspace:*",
     "i18next": "^26.0.7",
     "lucide-react": "^1.8.0",
     "next-themes": "^0.4.6",
@@ -65,6 +66,7 @@
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.58.2",
     "vite": "^5.4.0",
-    "vite-plugin-wasm": "^3.6.0"
+    "vite-plugin-wasm": "^3.6.0",
+    "vitest": "^4.1.5"
   }
 }

@@ -27,12 +27,12 @@ export default [
       parserOptions: {
         ecmaVersion: "latest",
         sourceType: "module",
-        project: ["./tsconfig.json"]
-      }
+        project: ["./tsconfig.json"],
+      },
     },
     plugins: {
       "@typescript-eslint": plugin,
-      prettier: pluginPrettier
+      prettier: pluginPrettier,
     },
     rules: {
       "prettier/prettier": "error",
@@ -44,10 +44,10 @@ export default [
       "@typescript-eslint/no-unsafe-call": "off",
       "@typescript-eslint/no-unsafe-member-access": "off",
       "@typescript-eslint/explicit-function-return-type": "off",
-      "@typescript-eslint/consistent-type-definitions": "off"
-    }
+      "@typescript-eslint/consistent-type-definitions": "off",
+    },
   },
   {
-    ignores: ["src/managed/**"]
-  }
+    ignores: ["src/managed/**"],
+  },
 ];

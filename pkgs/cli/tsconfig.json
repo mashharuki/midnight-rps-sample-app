@@ -5,6 +5,7 @@
     "outDir": "dist",
     "declaration": true,
     "lib": ["ESNext"],
+    "types": ["node"],
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "Bundler",
