@@ -24,6 +24,7 @@
     "ts-node": "^10.9.2"
   },
   "overrides": {
-    "smoldot": "npm:empty-npm-package@^1.0.0"
+    "smoldot": "npm:empty-npm-package@^1.0.0",
+    "@midnight-ntwrk/wallet-sdk-address-format": "3.1.0"
   }
 }
