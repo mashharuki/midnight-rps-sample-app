@@ -22,5 +22,8 @@
     "@biomejs/biome": "2.4.12",
     "cli": "workspace:*",
     "ts-node": "^10.9.2"
+  },
+  "overrides": {
+    "smoldot": "npm:empty-npm-package@^1.0.0"
   }
 }
