@@ -2,9 +2,38 @@
 
 Midnight RPS sample dApp
 
+## Overview
+
+midnight-rps-sample-app is a sample Rock-Paper-Scissors dApp project built on Midnight, a privacy-focused blockchain.
+
+### アプリの特徴
+
+- **Fair Gameplay via Zero-Knowledge Proofs (ZK Proofs)**  
+  The app utilizes a "commit/reveal" scheme powered by Compact smart contracts. Players commit to their move (Rock, Paper, or Scissors) by submitting a hashed value. Once all players have committed, the moves are revealed. This ensures a tamper-proof gaming experience where "sniping" or reacting to an opponent's move is impossible.
+
+- **Powered by the Midnight Blockchain**  
+  Contracts are deployed on the Midnight PreProd testnet, with all transactions recorded on-chain.
+
+- **Full-Stack Architecture**  
+  | Package | Role |
+  |---|---|
+  | `pkgs/contract` | Smart contracts written in the Compact language |
+  | `pkgs/cli` | CLI tools for contract deployment and interaction |
+  | `pkgs/app` | Frontend UI built with React + Vite |
+
+- **Lace Wallet Integration**  
+  Connects with Lace Wallet via the `@midnight-ntwrk/dapp-connector-api` for secure signing and transaction processing.
+
+### Game Flow
+
+1. **Commit Phase** — Each player commits their move and a salt to the blockchain as a hash (generating a ZK Proof).
+2. **Reveal Phase** — Both players reveal their previously committed moves.
+3. **Settlement** — The contract determines the outcome（`player1_wins` / `player2_wins` / `draw`）and records it on-chain.
+
 ## Enviroment Info
 
 ```bash
+Docker version 27.4.0
 compact 0.2.0
 bun 1.3.13
 node 23.3.0
@@ -41,6 +70,8 @@ bun app build
 ```
 
 ### Start Proof Server
+
+> you must set version 8.0.3
 
 ```bash
 docker run -d -p 127.0.0.1:6300:6300 midnightntwrk/proof-server:8.0.3 midnight-proof-server           
