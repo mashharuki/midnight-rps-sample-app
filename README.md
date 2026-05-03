@@ -55,6 +55,16 @@ node 23.3.0
 
 ## How to work
 
+### Install Lace Wallet to your browser
+
+If you have not yet installed Lace Wallet, you must go to below page & need to install Lace Wallet
+
+https://www.lace.io/
+
+Next, you need to create wallet account of Midnight
+
+> Please switch to PreProd Network
+
 ### Install
 
 ```bash
