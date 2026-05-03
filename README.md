@@ -45,16 +45,16 @@ bun cli preprod-pts
 Deployed Contract Address info
 
 ```bash
-[18:23:54.749] INFO (44131): Deploying RPS contract...
-  ⠹ Deploying RPS contract[18:24:17.260] INFO (44131): Deployed RPS contract at: 2a550650cd1af2054caf99349c44ae732266aa89faac0c17339f7069c4401fa4
+[19:24:25.997] INFO (40223): Deploying RPS contract...
+  ⠇ Deploying RPS contract[19:24:51.416] INFO (40223): Deployed RPS contract at: 23149945fed06aa010cc3e48e9f5df91625567300fae4e09371bb788d07a6bd8
   ✓ Deploying RPS contract
-  Contract deployed at: 2a550650cd1af2054caf99349c44ae732266aa89faac0c17339f7069c4401fa4
+  Contract deployed at: 23149945fed06aa010cc3e48e9f5df91625567300fae4e09371bb788d07a6bd8
 ```
 
 ```bash
 ──────────────────────────────────────────────────────────────
-  RPS Actions                         DUST: 2,754,048,400,999,999,998
-  Contract: 2a550650cd1af2054caf99349c44ae732266aa89faac0c17339f7069c4401fa4
+  RPS Actions                         DUST: 3,497,759,478,999,999,996
+  Contract: 23149945fed06aa010cc3e48e9f5df91625567300fae4e09371bb788d07a6bd8
 ──────────────────────────────────────────────────────────────
   [1] Commit my move
   [2] Reveal my move
@@ -71,13 +71,13 @@ Deployed Contract Address info
   [3] Scissors ✌️
 ──────────────────────────────────────────────────────────────
 > 1
-[18:28:14.544] INFO (44131): Committing move 0...
-  ⠧ Committing move (Rock) — generating ZK proof[18:28:39.618] INFO (44131): Commit TX 00df5b8772571c5800e28ea8d4530e4e253bffaf11d434c6e0dcc20ae99eee4bac added in block 603146
+[19:36:19.509] INFO (40223): Committing move 0...
+  ⠸ Committing move (Rock) — generating ZK proof[19:36:45.473] INFO (40223): Commit TX 0072b7ad5d6127b3e6d02373ccd967c7329b2ca7a8be35d099f44ebb6736728cca added in block 618227
   ✓ Committing move (Rock) — generating ZK proof
 
 ──────────────────────────────────────────────────────────────
-  RPS Actions                         DUST: 2,755,914,354,999,999,997
-  Contract: 2a550650cd1af2054caf99349c44ae732266aa89faac0c17339f7069c4401fa4
+  RPS Actions                         DUST: 3,503,362,116,999,999,995
+  Contract: 23149945fed06aa010cc3e48e9f5df91625567300fae4e09371bb788d07a6bd8
 ──────────────────────────────────────────────────────────────
   [1] Commit my move
   [2] Reveal my move
@@ -85,14 +85,18 @@ Deployed Contract Address info
   [4] Exit
 ──────────────────────────────────────────────────────────────
 > 2
-[18:31:13.384] INFO (44131): Revealing move...
-  ✗ Revealing move — generating ZK proof
-  ✗ Reveal failed: Unexpected error executing scoped transaction '<unnamed>': Error: failed assert: Not in committed state
-
+[19:37:05.494] INFO (40223): Revealing move...
+  ⠇ Revealing move — generating ZK proof[19:37:33.105] INFO (40223): Reveal TX 00ba3dd2c40736337619c979afeb2210d8b36fc917a93e403a90b1378f07eb680e added in block 618235
+  ✓ Revealing move — generating ZK proof
 
 ──────────────────────────────────────────────────────────────
-  RPS Actions                         DUST: 2,757,204,006,999,999,997
-  Contract: 2a550650cd1af2054caf99349c44ae732266aa89faac0c17339f7069c4401fa4
+  RPS Actions                         DUST: 3,503,458,932,999,999,994
+  Contract: 23149945fed06aa010cc3e48e9f5df91625567300fae4e09371bb788d07a6bd8
+──────────────────────────────────────────────────────────────
+
+──────────────────────────────────────────────────────────────
+  RPS Actions                         DUST: 3,504,021,088,999,999,994
+  Contract: 23149945fed06aa010cc3e48e9f5df91625567300fae4e09371bb788d07a6bd8
 ──────────────────────────────────────────────────────────────
   [1] Commit my move
   [2] Reveal my move
@@ -100,29 +104,27 @@ Deployed Contract Address info
   [4] Exit
 ──────────────────────────────────────────────────────────────
 > 3
-[18:31:18.101] INFO (44131): Checking RPS ledger state...
-[18:31:18.406] INFO (44131): RPS state: {"state":0,"game_over":false,"p1_key":"0x84508231...","p2_key":"0x00000000...","p1_joined":true,"p2_joined":false,"p1_commit":"0x46bd84ad...","p2_commit":"0x00000000...","p1_revealed":false,"p2_revealed":false,"p1_move":0,"p2_move":0,"result":0}
+[19:38:49.770] INFO (40223): Checking RPS ledger state...
+[19:38:50.631] INFO (40223): RPS state: {"state":2,"game_over":true,"p1_key":"0xc3625c1f...","p2_key":"0x12c4698e...","p1_joined":true,"p2_joined":true,"p1_commit":"0x9accc673...","p2_commit":"0x7516506b...","p1_revealed":true,"p2_revealed":true,"p1_move":1,"p2_move":0,"result":1}
 
-  Game State:   waiting
-  Game Over:    false
+  Game State:   finished
+  Game Over:    true
   P1 Joined:   true
-  P2 Joined:   false
-  P1 Revealed: false
-  P2 Revealed: false
-  Result:       not_determined
+  P2 Joined:   true
+  P1 Revealed: true
+  P2 Revealed: true
+  Result:       player1_wins
 
 
 ──────────────────────────────────────────────────────────────
-  RPS Actions                         DUST: 2,757,228,807,999,999,997
-  Contract: 2a550650cd1af2054caf99349c44ae732266aa89faac0c17339f7069c4401fa4
+  RPS Actions                         DUST: 3,504,095,491,999,999,994
+  Contract: 23149945fed06aa010cc3e48e9f5df91625567300fae4e09371bb788d07a6bd8
 ──────────────────────────────────────────────────────────────
   [1] Commit my move
   [2] Reveal my move
   [3] Show game state
   [4] Exit
 ──────────────────────────────────────────────────────────────
-> 4
-[18:31:23.916] INFO (44131): Goodbye.
 ```
 
 ### Start server

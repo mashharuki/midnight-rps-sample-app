@@ -65,14 +65,32 @@ export const setMyMove = async (
   providers: RpsProviders,
   move: RpsMove,
 ): Promise<void> => {
-  const salt = crypto.getRandomValues(new Uint8Array(32));
+  const current =
+    (await providers.privateStateProvider.get(RpsPrivateStateId)) ??
+    INITIAL_PRIVATE_STATE;
+  // Preserve the existing salt when one is already stored.  Regenerating the
+  // salt on every call would break the on-chain commitment if the first submit
+  // succeeded but the wallet reported an error (e.g. Lace runtime.lastError
+  // channel-close).  A fresh salt is only needed for the very first commit of
+  // each game; reset() clears mySalt so the next game always gets a new one.
+  const salt = current.mySalt ?? crypto.getRandomValues(new Uint8Array(32));
+  await providers.privateStateProvider.set(RpsPrivateStateId, {
+    ...current,
+    myMove: move,
+    mySalt: salt,
+  });
+};
+
+export const clearPrivateState = async (
+  providers: RpsProviders,
+): Promise<void> => {
   const current =
     (await providers.privateStateProvider.get(RpsPrivateStateId)) ??
     INITIAL_PRIVATE_STATE;
   await providers.privateStateProvider.set(RpsPrivateStateId, {
     ...current,
-    myMove: move,
-    mySalt: salt,
+    myMove: null,
+    mySalt: null,
   });
 };
 

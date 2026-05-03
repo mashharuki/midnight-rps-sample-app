@@ -1,6 +1,7 @@
 import { useWallet } from "@/contexts/useWallet";
 import { createRpsProviders } from "@/lib/providers";
 import {
+  clearPrivateState,
   commitMove,
   joinRpsContract,
   revealMove,
@@ -95,7 +96,10 @@ export function useRpsGame(): UseRpsGameResult {
         setDeployedContract(contract);
         setContractAddress(addr);
 
-        // Start ledger subscription; auto-transition to finished when game ends
+        // Start ledger subscription; auto-transition status when game state advances.
+        // This reconciles the app status with the actual on-chain state, which is
+        // critical after a page refresh or after a wallet error that obscured a
+        // successful commit transaction.
         subscriptionRef.current?.unsubscribe();
         subscriptionRef.current = subscribeToRpsState(
           providers,
@@ -105,6 +109,14 @@ export function useRpsGame(): UseRpsGameResult {
             setLedgerState(ls);
             if (ls.state === RpsGameState.finished) {
               setStatus("finished");
+            } else if (ls.state === RpsGameState.committed) {
+              // Both players have committed on-chain. If our local status is still
+              // "joined" (e.g. after a page refresh or a silently-succeeded commit
+              // that the wallet reported as failed), advance to "committed" so the
+              // reveal button becomes available.
+              setStatus((prev) =>
+                prev === "joined" || prev === "idle" ? "committed" : prev,
+              );
             }
           },
           error: (e: unknown) => setError(String(e)),
@@ -134,6 +146,14 @@ export function useRpsGame(): UseRpsGameResult {
       return;
     }
 
+    // Guard: on-chain state must be "waiting" before committing.
+    // If it's already "committed", our previous commit went through despite
+    // the wallet reporting an error (e.g. Lace runtime.lastError channel close).
+    if (ledgerState !== null && ledgerState.state !== RpsGameState.waiting) {
+      setStatus("committed");
+      return;
+    }
+
     prevStatusRef.current = "joined";
     setStatus("committing");
     setError(null);
@@ -148,24 +168,37 @@ export function useRpsGame(): UseRpsGameResult {
       setStatus("error");
       setError(String(e));
     }
-  }, [providers, deployedContract, selectedMove, status]);
+  }, [providers, deployedContract, selectedMove, status, ledgerState]);
 
   const reset = useCallback(() => {
     subscriptionRef.current?.unsubscribe();
     subscriptionRef.current = null;
+    // Clear move/salt so the next game always gets a fresh commitment.
+    // secretKey is preserved (derived pk is not stored on-chain after game ends).
+    if (providers) void clearPrivateState(providers);
     setDeployedContract(null);
     setLedgerState(null);
     setSelectedMove(null);
     setStatus("idle");
     setError(null);
-  }, []);
+  }, [providers]);
 
   const reveal = useCallback(async () => {
     if (!deployedContract) return;
 
-    // Restore from error state if needed
+    // Restore from error state if needed.
+    // If prevStatus was "joined" but the ledger is already "committed", the
+    // earlier commit went through on-chain despite the wallet throwing an error
+    // (e.g. Lace runtime.lastError channel close). Treat this as "committed"
+    // so the user can proceed to reveal instead of being sent back to the
+    // commit phase and hitting "Not in waiting state".
     if (status === "error") {
-      setStatus(prevStatusRef.current);
+      const restoredStatus =
+        prevStatusRef.current === "joined" &&
+        ledgerState?.state === RpsGameState.committed
+          ? "committed"
+          : prevStatusRef.current;
+      setStatus(restoredStatus);
       setError(null);
       return;
     }
@@ -183,7 +216,7 @@ export function useRpsGame(): UseRpsGameResult {
       setStatus("error");
       setError(String(e));
     }
-  }, [deployedContract, status]);
+  }, [deployedContract, status, ledgerState]);
 
   // Clean up subscription when wallet disconnects or component unmounts
   useEffect(() => {
