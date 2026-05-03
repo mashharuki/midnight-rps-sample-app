@@ -242,6 +242,22 @@ export default defineConfig({
     wasm(),
     inject({ process: "process/browser", Buffer: ["buffer", "Buffer"] }),
   ],
+  server: {
+    // Proxy proof-server requests through the dev server so the browser never
+    // fetches http://127.0.0.1:6300 directly.  Lace's service worker intercepts
+    // all fetch calls from the page; requests to 127.0.0.1 from a service worker
+    // context are blocked by Chrome (ERR_FAILED).  Routing via a same-origin path
+    // (/proof-server/...) lets the service worker pass through the request to
+    // Vite's Node.js process, which then proxies it server-side—bypassing all
+    // browser security restrictions on localhost access.
+    proxy: {
+      "/proof-server": {
+        target: "http://127.0.0.1:6300",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/proof-server/, ""),
+      },
+    },
+  },
   resolve: {
     // Force all packages to resolve a single copy of React so hooks from
     // react-i18next and app code share the same dispatcher.

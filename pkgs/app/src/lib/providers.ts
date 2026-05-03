@@ -15,7 +15,6 @@ import type {
   WalletProvider,
 } from "@midnight-ntwrk/midnight-js-types";
 import { fromHex, toHex } from "@midnight-ntwrk/midnight-js-utils";
-import { FALLBACK_URIS } from "@/utils/constants";
 import type { WalletConnectionResult } from "@/utils/types";
 import type { RpsCircuits, RpsProviders } from "./rps-types";
 import { RpsPrivateStateId } from "./rps-types";
@@ -71,11 +70,18 @@ export function createRpsProviders(
     fetch.bind(window),
   );
 
-  const proverServerUri = FALLBACK_URIS.proverServerUri;
+  // Route proof-server requests through the Vite dev-server proxy
+  // (/proof-server → http://127.0.0.1:6300) so the browser never fetches
+  // 127.0.0.1 directly.  Lace's service worker intercepts all page-level fetch
+  // calls; requests originating from that service worker context to 127.0.0.1
+  // are blocked by Chrome with ERR_FAILED.  Using a same-origin path means the
+  // service worker passes it through to the network, where Vite's Node.js proxy
+  // forwards it server-side—completely bypassing browser security restrictions.
+  const proverServerUri = `${window.location.origin}/proof-server`;
   console.log(
     "[providers] Lace proverServerUri:",
     uris.proverServerUri,
-    "→ using:",
+    "→ using (via proxy):",
     proverServerUri,
   );
 
