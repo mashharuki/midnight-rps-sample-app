@@ -10,6 +10,20 @@ bun 1.3.13
 node 23.3.0
 ```
 
+## Application Image
+
+![](./docs/0.png)
+
+![](./docs/1.png)
+
+![](./docs/2.png)
+
+![](./docs/3.png)
+
+![](./docs/4.png)
+
+![](./docs/5.png)
+
 ## How to work
 
 ### Install
