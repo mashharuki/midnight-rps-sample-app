@@ -6,7 +6,7 @@ Midnight RPS sample dApp
 
 midnight-rps-sample-app is a sample Rock-Paper-Scissors dApp project built on Midnight, a privacy-focused blockchain.
 
-### アプリの特徴
+### Key Features
 
 - **Fair Gameplay via Zero-Knowledge Proofs (ZK Proofs)**  
   The app utilizes a "commit/reveal" scheme powered by Compact smart contracts. Players commit to their move (Rock, Paper, or Scissors) by submitting a hashed value. Once all players have committed, the moves are revealed. This ensures a tamper-proof gaming experience where "sniping" or reacting to an opponent's move is impossible.
