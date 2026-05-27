@@ -115,6 +115,7 @@
         "@midnight-ntwrk/compact-runtime": "^0.15.0",
       },
       "devDependencies": {
+        "typescript": "~6.0.2",
         "vitest": "^4.1.5",
       },
     },

@@ -30,14 +30,29 @@ midnight-rps-sample-app is a sample Rock-Paper-Scissors dApp project built on Mi
 2. **Reveal Phase** — Both players reveal their previously committed moves.
 3. **Settlement** — The contract determines the outcome（`player1_wins` / `player2_wins` / `draw`）and records it on-chain.
 
-## Enviroment Info
+## Environment Info
 
 ```bash
 Docker version 27.4.0
-compact 0.2.0
+compact 0.2.0        # wrapper CLI (manages compactc versions)
+compactc 0.30.0      # actual Compact compiler — MUST use this version
 bun 1.3.13
 node 23.3.0
 ```
+
+> **Important**: `compact 0.2.0` is the CLI wrapper only. The contract was authored and verified against **compactc 0.30.0** (language version 0.22). Installing a newer compactc (e.g. 0.31.0, which emits language 0.23) will fail the pragma check.
+>
+> After installing the `compact` wrapper CLI, pin the correct compactc version:
+>
+> ```bash
+> compact update 0.30.0
+> ```
+>
+> Verify with:
+>
+> ```bash
+> compact list   # → should show 0.30.0 as active (marked with →)
+> ```
 
 ## Application Image
 
@@ -73,11 +88,23 @@ bun install
 
 ### Build
 
+First, compile the Compact contract:
+
 ```bash
 bun contract compact
-bun cli build
-bun app build
 ```
+
+Then build all TypeScript packages (contract → sync keys → CLI → app):
+
+```bash
+bun run build
+```
+
+The `bun run build` command runs the full pipeline in order:
+1. `pkgs/contract` — TypeScript compile + copy `managed/` into `dist/`
+2. Sync ZK keys/circuits from contract into `pkgs/app/public/`
+3. `pkgs/cli` — TypeScript compile
+4. `pkgs/app` — Vite build
 
 ### Start Proof Server
 
