@@ -70,6 +70,17 @@ node 23.3.0
 
 ## How to work
 
+### Use Devcontainer (Recommended)
+
+This repository includes a preconfigured Devcontainer environment.
+
+1. Install the VS Code extension `Dev Containers` (`ms-vscode-remote.remote-containers`).
+2. Open this repository in VS Code.
+3. Run `Dev Containers: Reopen in Container` from the Command Palette.
+4. Wait until container startup completes.
+
+When the container is created, `compactc 0.30.0` is pinned automatically by `postCreateCommand`.
+
 ### Install Lace Wallet to your browser
 
 If you have not yet installed Lace Wallet, you must go to below page & need to install Lace Wallet
