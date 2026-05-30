@@ -121,7 +121,7 @@ If you don't have testnet NIGHT Token, you can get some token from below site.
 https://faucet.preprod.midnight.network/
 
 ```bash
-bun cli preprod-pts
+bun cli preprod-ps
 ```
 
 Deployed Contract Address info
