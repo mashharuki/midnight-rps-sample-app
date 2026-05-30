@@ -5,10 +5,6 @@ if docker compose version >/dev/null 2>&1; then
   exec docker compose "$@"
 fi
 
-if command -v docker-compose >/dev/null 2>&1; then
-  exec docker-compose "$@"
-fi
-
 # Last-resort fallback: run Compose v2 as a container.
 if docker info >/dev/null 2>&1; then
   exec docker run --rm \

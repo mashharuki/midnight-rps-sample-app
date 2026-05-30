@@ -4,6 +4,7 @@ ARG TARGETARCH
 ARG NODE_VERSION=23.3.0
 ARG BUN_VERSION=1.3.13
 ARG DOCKER_CLI_VERSION=27.4.0
+ARG DOCKER_COMPOSE_VERSION=2.29.7
 ARG COMPACT_WRAPPER_VERSION=0.2.0
 ARG COMPACTC_VERSION=0.30.0
 
@@ -71,6 +72,20 @@ RUN set -eux; \
     install -m 0755 /tmp/docker/docker /usr/local/bin/docker; \
     rm -rf /tmp/docker /tmp/docker.tgz; \
     docker --version | grep -F "${DOCKER_CLI_VERSION}"
+
+RUN set -eux; \
+    case "${TARGETARCH}" in \
+        "amd64") COMPOSE_ARCH="x86_64" ;; \
+        "arm64") COMPOSE_ARCH="aarch64" ;; \
+        *) \
+            echo "Unsupported TARGETARCH: ${TARGETARCH}"; \
+            exit 1; \
+            ;; \
+    esac; \
+    install -d /usr/local/lib/docker/cli-plugins; \
+    curl -fsSLo /usr/local/lib/docker/cli-plugins/docker-compose "https://github.com/docker/compose/releases/download/v${DOCKER_COMPOSE_VERSION}/docker-compose-linux-${COMPOSE_ARCH}"; \
+    chmod +x /usr/local/lib/docker/cli-plugins/docker-compose; \
+    docker compose version | grep -F "v${DOCKER_COMPOSE_VERSION}"
 
 # Install compact wrapper (latest release asset — version-tagged installer assets are not published)
 # compactc pinning is done at container start via postCreateCommand so it lands in the user's home
