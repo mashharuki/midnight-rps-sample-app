@@ -61,6 +61,7 @@ import {
   type DeployedRpsContract,
 } from "./common-types";
 import path from "node:path";
+import fs from "node:fs";
 import { type Config, currentDir } from "./config";
 import { levelPrivateStateProvider } from "@midnight-ntwrk/midnight-js-level-private-state-provider";
 import {
@@ -255,6 +256,49 @@ const buildDustConfig = ({
   relayURL: new URL(node.replace(/^http/, "ws")),
 });
 
+// ─── Wallet State Cache ───────────────────────────────────────────────────────
+
+const walletCacheDir = (networkId: string, seed: string) =>
+  path.resolve(currentDir, "..", "wallet-cache", networkId, seed.slice(0, 16));
+
+const loadCachedState = (dir: string, name: string): string | null => {
+  const p = path.join(dir, `${name}.json`);
+  try {
+    return fs.existsSync(p) ? fs.readFileSync(p, "utf8") : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveCachedState = (dir: string, name: string, data: string): void => {
+  try {
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(path.join(dir, `${name}.json`), data, "utf8");
+  } catch {
+    // キャッシュ保存失敗は致命的ではないので無視
+  }
+};
+
+const persistWalletState = async (
+  wallet: WalletFacade,
+  cacheDir: string,
+): Promise<void> => {
+  try {
+    const [shielded, unshielded, dust] = await Promise.all([
+      wallet.shielded.serializeState(),
+      wallet.unshielded.serializeState(),
+      wallet.dust.serializeState(),
+    ]);
+    saveCachedState(cacheDir, "shielded", shielded);
+    saveCachedState(cacheDir, "unshielded", unshielded);
+    saveCachedState(cacheDir, "dust", dust);
+  } catch {
+    // キャッシュ保存失敗は致命的ではないので無視
+  }
+};
+
+// ─── Key Derivation ───────────────────────────────────────────────────────────
+
 /**
  * Derive HD wallet keys for all three roles (Zswap, NightExternal, Dust)
  * from a hex-encoded seed using BIP-44 style derivation at account 0, index 0.
@@ -436,6 +480,9 @@ export const buildWalletAndWaitForFunds = async (
 ): Promise<WalletContext> => {
   console.log("");
 
+  const networkId = getNetworkId();
+  const cacheDir = walletCacheDir(networkId, seed);
+
   // Derive HD keys and initialize the three sub-wallets
   const { wallet, shieldedSecretKeys, dustSecretKey, unshieldedKeystore } =
     await withStatus("Building wallet", async () => {
@@ -446,31 +493,40 @@ export const buildWalletAndWaitForFunds = async (
       const dustSecretKey = ledger.DustSecretKey.fromSeed(keys[Roles.Dust]);
       const unshieldedKeystore = createKeystore(
         keys[Roles.NightExternal],
-        getNetworkId(),
+        networkId,
       );
 
-      // WalletFacade is initialized via a static factory that takes a unified
-      // configuration object and per-wallet factory functions for each sub-wallet
-      // (shielded, unshielded, dust). The three config builders are spread into
-      // one object to satisfy the unified configuration shape.
       const walletConfig = {
         ...buildShieldedConfig(config),
         ...buildUnshieldedConfig(config),
         ...buildDustConfig(config),
       };
+
+      // Load cached states so wallets resume from last checkpoint instead of genesis
+      const shieldedCache = loadCachedState(cacheDir, "shielded");
+      const unshieldedCache = loadCachedState(cacheDir, "unshielded");
+      const dustCache = loadCachedState(cacheDir, "dust");
+      const fromCache = shieldedCache && unshieldedCache && dustCache;
+
       const wallet = await WalletFacade.init({
         configuration: walletConfig,
         shielded: (cfg) =>
-          ShieldedWallet(cfg).startWithSecretKeys(shieldedSecretKeys),
+          fromCache
+            ? ShieldedWallet(cfg).restore(shieldedCache)
+            : ShieldedWallet(cfg).startWithSecretKeys(shieldedSecretKeys),
         unshielded: (cfg) =>
-          UnshieldedWallet(cfg).startWithPublicKey(
-            PublicKey.fromKeyStore(unshieldedKeystore),
-          ),
+          fromCache
+            ? UnshieldedWallet(cfg).restore(unshieldedCache)
+            : UnshieldedWallet(cfg).startWithPublicKey(
+                PublicKey.fromKeyStore(unshieldedKeystore),
+              ),
         dust: (cfg) =>
-          DustWallet(cfg).startWithSecretKey(
-            dustSecretKey,
-            ledger.LedgerParameters.initialParameters().dust,
-          ),
+          fromCache
+            ? DustWallet(cfg).restore(dustCache)
+            : DustWallet(cfg).startWithSecretKey(
+                dustSecretKey,
+                ledger.LedgerParameters.initialParameters().dust,
+              ),
       });
       await wallet.start(shieldedSecretKeys, dustSecretKey);
 
@@ -478,7 +534,6 @@ export const buildWalletAndWaitForFunds = async (
     });
 
   // Show unshielded address immediately so user can fund via faucet while syncing
-  const networkId = getNetworkId();
   const DIV = "──────────────────────────────────────────────────────────────";
   console.log(`
 ${DIV}
@@ -496,6 +551,9 @@ ${DIV}
   const syncedState = await withStatus("Syncing with network", () =>
     waitForSync(wallet),
   );
+
+  // Persist wallet state so the next run resumes from this checkpoint
+  await persistWalletState(wallet, cacheDir);
 
   // Display the full wallet summary with all addresses and balances
   printWalletSummary(syncedState, unshieldedKeystore);
