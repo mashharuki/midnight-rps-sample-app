@@ -117,14 +117,6 @@ The `bun run build` command runs the full pipeline in order:
 3. `pkgs/cli` — TypeScript compile
 4. `pkgs/app` — Vite build
 
-### Start Proof Server
-
-> you must set version 8.0.3
-
-```bash
-docker run -d -p 127.0.0.1:6300:6300 midnightntwrk/proof-server:8.0.3 midnight-proof-server           
-```
-
 ### Deploy Contract to PreProd Network
 
 If you don't have testnet NIGHT Token, you can get some token from below site.
