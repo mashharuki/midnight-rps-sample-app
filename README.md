@@ -130,6 +130,16 @@ bun cli preprod-ps
 Deployed Contract Address info
 
 ```bash
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║              Midnight RPS Example                            ║
+║              ─────────────────────                           ║
+║              Rock-Paper-Scissors with ZK commit-reveal       ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+.
+.
+.
 [19:24:25.997] INFO (40223): Deploying RPS contract...
   ⠇ Deploying RPS contract[19:24:51.416] INFO (40223): Deployed RPS contract at: 23149945fed06aa010cc3e48e9f5df91625567300fae4e09371bb788d07a6bd8
   ✓ Deploying RPS contract
