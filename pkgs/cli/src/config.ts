@@ -50,8 +50,8 @@ export class PreviewConfig implements Config {
     "preview",
     `${new Date().toISOString()}.log`,
   );
-  indexer = "https://indexer.preview.midnight.network/api/v3/graphql";
-  indexerWS = "wss://indexer.preview.midnight.network/api/v3/graphql/ws";
+  indexer = "https://indexer.preview.midnight.network/api/v4/graphql";
+  indexerWS = "wss://indexer.preview.midnight.network/api/v4/graphql/ws";
   node = "https://rpc.preview.midnight.network";
   proofServer = "http://127.0.0.1:6300";
   constructor() {
@@ -67,8 +67,8 @@ export class PreprodConfig implements Config {
     "preprod",
     `${new Date().toISOString()}.log`,
   );
-  indexer = "https://indexer.preprod.midnight.network/api/v3/graphql";
-  indexerWS = "wss://indexer.preprod.midnight.network/api/v3/graphql/ws";
+  indexer = "https://indexer.preprod.midnight.network/api/v4/graphql";
+  indexerWS = "wss://indexer.preprod.midnight.network/api/v4/graphql/ws";
   node = "https://rpc.preprod.midnight.network";
   proofServer = "http://127.0.0.1:6300";
   constructor() {
