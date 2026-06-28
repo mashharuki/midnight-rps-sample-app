@@ -117,11 +117,23 @@ The `bun run build` command runs the full pipeline in order:
 3. `pkgs/cli` — TypeScript compile
 4. `pkgs/app` — Vite build
 
+### Start Proof Server
+
+```bash
+docker compose -d -f pkgs/cli/proof-server.yml up
+```
+
 ### Deploy Contract to PreProd Network
 
 If you don't have testnet NIGHT Token, you can get some token from below site.
 
 https://faucet.preprod.midnight.network/
+
+```bash
+bun cli preprod
+```
+
+> From the second time onward, please run the following command:
 
 ```bash
 bun cli preprod-ps

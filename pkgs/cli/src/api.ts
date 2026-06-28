@@ -223,7 +223,11 @@ const buildShieldedConfig = ({
   indexerClientConnection: {
     indexerHttpUrl: indexer,
     indexerWsUrl: indexerWS,
+    keepAlive: 0,
   },
+  // Default batchSize is 10, giving 1.2M/10 × 4ms = ~80min scheduling overhead on preprod.
+  // 1000 reduces this to ~5 seconds.
+  batchSize: 1000,
   provingServerUrl: new URL(proofServer),
   relayURL: new URL(node.replace(/^http/, "ws")),
 });
@@ -233,6 +237,7 @@ const buildUnshieldedConfig = ({ indexer, indexerWS }: Config) => ({
   indexerClientConnection: {
     indexerHttpUrl: indexer,
     indexerWsUrl: indexerWS,
+    keepAlive: 0,
   },
   txHistoryStorage: new InMemoryTransactionHistoryStorage(),
 });
@@ -251,6 +256,7 @@ const buildDustConfig = ({
   indexerClientConnection: {
     indexerHttpUrl: indexer,
     indexerWsUrl: indexerWS,
+    keepAlive: 0,
   },
   provingServerUrl: new URL(proofServer),
   relayURL: new URL(node.replace(/^http/, "ws")),

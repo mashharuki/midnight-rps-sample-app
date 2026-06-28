@@ -25,7 +25,7 @@ const dockerEnv = new DockerComposeEnvironment(
   "proof-server.yml",
 ).withWaitStrategy(
   "proof-server-1",
-  Wait.forLogMessage("Actix runtime found; starting in Actix runtime", 1),
+  Wait.forLogMessage("Actix runtime found; starting in Actix runtime", 1).withStartupTimeout(300_000),
 );
 const logger = await createLogger(config.logDir);
 await run(config, logger, dockerEnv);

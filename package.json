@@ -25,6 +25,8 @@
   },
   "overrides": {
     "smoldot": "npm:empty-npm-package@^1.0.0",
-    "@midnight-ntwrk/wallet-sdk-address-format": "3.1.0"
+    "@midnight-ntwrk/wallet-sdk-address-format": "3.1.0",
+    "@midnight-ntwrk/ledger-v8": "8.1.0",
+    "effect": "3.21.4"
   }
 }
