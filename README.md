@@ -120,7 +120,7 @@ The `bun run build` command runs the full pipeline in order:
 ### Start Proof Server
 
 ```bash
-docker compose -d -f pkgs/cli/proof-server.yml up
+docker compose -f pkgs/cli/proof-server.yml up
 ```
 
 ### Deploy Contract to PreProd Network
