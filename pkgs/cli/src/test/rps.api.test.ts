@@ -1,13 +1,12 @@
-import { type WalletContext } from "../api";
+import { INITIAL_RPS_PRIVATE_STATE, Rps } from "contract";
 import path from "path";
+import type { RpsProviders } from "shared";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { WalletContext } from "../api";
 import * as api from "../api";
-import type { RpsProviders } from "../common-types";
-import { INITIAL_RPS_PRIVATE_STATE } from "contract";
-import { Rps } from "contract";
 import { currentDir } from "../config";
 import { createLogger } from "../logger-utils";
 import { TestEnvironment } from "./commons";
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 const logDir = path.resolve(
   currentDir,
@@ -69,8 +68,8 @@ describe("RPS API", () => {
 
     const state = await api.getRpsState(p1Providers, contractAddress);
     expect(state).not.toBeNull();
-    expect(state.result).toEqual(GameResult.player2_wins);
-    expect(state.game_over).toBe(true);
+    expect(state?.result).toEqual(GameResult.player2_wins);
+    expect(state?.game_over).toBe(true);
   });
 
   it("P1=rock, P2=rock → draw (Req 3.2) [@slow]", async () => {
@@ -91,8 +90,8 @@ describe("RPS API", () => {
 
     const state = await api.getRpsState(p1Providers, contractAddress);
     expect(state).not.toBeNull();
-    expect(state.result).toEqual(GameResult.draw);
-    expect(state.game_over).toBe(true);
+    expect(state?.result).toEqual(GameResult.draw);
+    expect(state?.game_over).toBe(true);
   });
 
   it("P1 commit after both committed → TX rejected (Req 1.4) [@slow]", async () => {

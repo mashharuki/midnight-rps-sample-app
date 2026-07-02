@@ -18,6 +18,7 @@ midnight-rps-sample-app is a sample Rock-Paper-Scissors dApp project built on Mi
   | Package | Role |
   |---|---|
   | `pkgs/contract` | Smart contracts written in the Compact language |
+  | `pkgs/shared` | Domain types, network config, and constants shared by `cli` and `app` |
   | `pkgs/cli` | CLI tools for contract deployment and interaction |
   | `pkgs/app` | Frontend UI built with React + Vite |
 
@@ -105,7 +106,7 @@ First, compile the Compact contract:
 bun contract compact
 ```
 
-Then build all TypeScript packages (contract → sync keys → CLI → app):
+Then build all TypeScript packages (contract → sync keys → shared → CLI → app):
 
 ```bash
 bun run build
@@ -114,8 +115,9 @@ bun run build
 The `bun run build` command runs the full pipeline in order:
 1. `pkgs/contract` — TypeScript compile + copy `managed/` into `dist/`
 2. Sync ZK keys/circuits from contract into `pkgs/app/public/`
-3. `pkgs/cli` — TypeScript compile
-4. `pkgs/app` — Vite build
+3. `pkgs/shared` — TypeScript compile
+4. `pkgs/cli` — TypeScript compile
+5. `pkgs/app` — Vite build
 
 ### Start Proof Server
 

@@ -1,7 +1,12 @@
 import type { ServiceUriConfig } from "@midnight-ntwrk/dapp-connector-api";
+import {
+  DEFAULT_PROOF_SERVER_URL,
+  MIDNIGHT_NETWORK_ENDPOINTS,
+  type MidnightNetworkId,
+} from "shared";
 
 /** フロントエンドが対応するネットワーク */
-export type NetworkId = "preprod" | "preview";
+export type NetworkId = MidnightNetworkId;
 
 /** ユーザーが選択可能なネットワークの表示順 */
 export const NETWORK_IDS: readonly NetworkId[] = ["preprod", "preview"];
@@ -19,30 +24,30 @@ export interface NetworkDefinition {
   faucetUrl: string;
   /**
    * ウォレットの getConfiguration() が使えない場合のフォールバックURI。
-   * pkgs/cli/src/config.ts の Preprod/PreviewConfig と同じエンドポイントに揃えてある。
+   * pkgs/shared/src/network-config.ts (pkgs/cli と共有) と同じエンドポイントに揃えてある。
    */
   fallbackUris: ServiceUriConfig;
 }
 
-export const NETWORKS: Record<NetworkId, NetworkDefinition> = {
-  preprod: {
-    label: "PreProd Testnet",
-    faucetUrl: "https://faucet.preprod.midnight.network/",
-    fallbackUris: {
-      indexerUri: "https://indexer.preprod.midnight.network/api/v3/graphql",
-      indexerWsUri: "wss://indexer.preprod.midnight.network/api/v3/graphql/ws",
-      proverServerUri: "http://127.0.0.1:6300",
-      substrateNodeUri: "https://rpc.preprod.midnight.network",
-    },
-  },
-  preview: {
-    label: "Preview Testnet",
-    faucetUrl: "https://faucet.preview.midnight.network/",
-    fallbackUris: {
-      indexerUri: "https://indexer.preview.midnight.network/api/v3/graphql",
-      indexerWsUri: "wss://indexer.preview.midnight.network/api/v3/graphql/ws",
-      proverServerUri: "http://127.0.0.1:6300",
-      substrateNodeUri: "https://rpc.preview.midnight.network",
-    },
-  },
+const NETWORK_LABELS: Record<NetworkId, string> = {
+  preprod: "PreProd Testnet",
+  preview: "Preview Testnet",
 };
+
+export const NETWORKS: Record<NetworkId, NetworkDefinition> =
+  Object.fromEntries(
+    NETWORK_IDS.map((networkId) => {
+      const endpoints = MIDNIGHT_NETWORK_ENDPOINTS[networkId];
+      const definition: NetworkDefinition = {
+        label: NETWORK_LABELS[networkId],
+        faucetUrl: endpoints.faucetUrl,
+        fallbackUris: {
+          indexerUri: endpoints.indexer,
+          indexerWsUri: endpoints.indexerWS,
+          proverServerUri: DEFAULT_PROOF_SERVER_URL,
+          substrateNodeUri: endpoints.node,
+        },
+      };
+      return [networkId, definition];
+    }),
+  ) as Record<NetworkId, NetworkDefinition>;

@@ -34,7 +34,10 @@ if (await isProofServerRunning(config.proofServer)) {
     "proof-server.yml",
   ).withWaitStrategy(
     "proof-server-1",
-    Wait.forLogMessage("Actix runtime found; starting in Actix runtime", 1).withStartupTimeout(300_000),
+    Wait.forLogMessage(
+      "Actix runtime found; starting in Actix runtime",
+      1,
+    ).withStartupTimeout(300_000),
   );
   await run(config, logger, dockerEnv);
 }

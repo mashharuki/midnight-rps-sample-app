@@ -13,15 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+import fs from "node:fs";
+import path from "node:path";
+import { CompiledContract } from "@midnight-ntwrk/compact-js";
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-import { type ContractAddress } from "@midnight-ntwrk/compact-runtime";
-import {
-  Rps,
-  rpsWitnesses,
-  INITIAL_RPS_PRIVATE_STATE,
-  type RpsPrivateState,
-} from "contract";
+import type { ContractAddress } from "@midnight-ntwrk/compact-runtime";
 import * as ledger from "@midnight-ntwrk/ledger-v8";
 import { unshieldedToken } from "@midnight-ntwrk/ledger-v8";
 import {
@@ -30,53 +27,59 @@ import {
 } from "@midnight-ntwrk/midnight-js-contracts";
 import { httpClientProofProvider } from "@midnight-ntwrk/midnight-js-http-client-proof-provider";
 import { indexerPublicDataProvider } from "@midnight-ntwrk/midnight-js-indexer-public-data-provider";
-import { NodeZkConfigProvider } from "@midnight-ntwrk/midnight-js-node-zk-config-provider";
-import {
-  type FinalizedTxData,
-  type MidnightProvider,
-  type WalletProvider,
-} from "@midnight-ntwrk/midnight-js-types";
-import { WalletFacade } from "@midnight-ntwrk/wallet-sdk-facade";
-import { DustWallet } from "@midnight-ntwrk/wallet-sdk-dust-wallet";
-import {
-  HDWallet,
-  Roles,
-  generateRandomSeed,
-} from "@midnight-ntwrk/wallet-sdk-hd";
-import { ShieldedWallet } from "@midnight-ntwrk/wallet-sdk-shielded";
-import {
-  createKeystore,
-  InMemoryTransactionHistoryStorage,
-  PublicKey,
-  UnshieldedWallet,
-  type UnshieldedKeystore,
-} from "@midnight-ntwrk/wallet-sdk-unshielded-wallet";
-import { type Logger } from "pino";
-import * as Rx from "rxjs";
-import { WebSocket } from "ws";
-import {
-  type RpsCircuits,
-  RpsPrivateStateId,
-  type RpsProviders,
-  type DeployedRpsContract,
-} from "./common-types";
-import path from "node:path";
-import fs from "node:fs";
-import { type Config, currentDir } from "./config";
 import { levelPrivateStateProvider } from "@midnight-ntwrk/midnight-js-level-private-state-provider";
+import { getNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
+import { NodeZkConfigProvider } from "@midnight-ntwrk/midnight-js-node-zk-config-provider";
+import type {
+  FinalizedTxData,
+  MidnightProvider,
+  WalletProvider,
+} from "@midnight-ntwrk/midnight-js-types";
 import {
   assertIsContractAddress,
   toHex,
 } from "@midnight-ntwrk/midnight-js-utils";
-import { getNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
-import { CompiledContract } from "@midnight-ntwrk/compact-js";
-import { Buffer } from "buffer";
 import {
   MidnightBech32m,
   ShieldedAddress,
   ShieldedCoinPublicKey,
   ShieldedEncryptionPublicKey,
 } from "@midnight-ntwrk/wallet-sdk-address-format";
+import { DustWallet } from "@midnight-ntwrk/wallet-sdk-dust-wallet";
+import { WalletFacade } from "@midnight-ntwrk/wallet-sdk-facade";
+import {
+  generateRandomSeed,
+  HDWallet,
+  Roles,
+} from "@midnight-ntwrk/wallet-sdk-hd";
+import { ShieldedWallet } from "@midnight-ntwrk/wallet-sdk-shielded";
+import {
+  createKeystore,
+  InMemoryTransactionHistoryStorage,
+  PublicKey,
+  type UnshieldedKeystore,
+  UnshieldedWallet,
+} from "@midnight-ntwrk/wallet-sdk-unshielded-wallet";
+import { Buffer } from "buffer";
+import {
+  INITIAL_RPS_PRIVATE_STATE,
+  Rps,
+  type RpsPrivateState,
+  rpsWitnesses,
+} from "contract";
+import type { Logger } from "pino";
+import * as Rx from "rxjs";
+import {
+  type DeployedRpsContract,
+  faucetUrlFor,
+  type RpsCircuits,
+  type RpsLedgerState,
+  RpsPrivateStateId,
+  type RpsProviders,
+} from "shared";
+import { WebSocket } from "ws";
+import { type Config, currentDir } from "./config";
+import { DIVIDER } from "./constants";
 
 let logger: Logger;
 
@@ -334,21 +337,6 @@ const deriveKeysFromSeed = (seed: string) => {
 const formatBalance = (balance: bigint): string => balance.toLocaleString();
 
 /**
- * Faucet URL for the given network, or undefined for networks without one
- * (e.g. standalone).
- */
-const faucetUrl = (networkId: string): string | undefined => {
-  switch (networkId) {
-    case "preprod":
-      return "https://faucet.preprod.midnight.network/";
-    case "preview":
-      return "https://faucet.preview.midnight.network/";
-    default:
-      return undefined;
-  }
-};
-
-/**
  * Runs an async operation with an animated spinner on the console.
  * Shows ⠋⠙⠹... while running, then ✓ on success or ✗ on failure.
  */
@@ -464,7 +452,7 @@ const printWalletSummary = (
     new ShieldedAddress(coinPubKey, encPubKey),
   ).toString();
 
-  const DIV = "──────────────────────────────────────────────────────────────";
+  const DIV = DIVIDER;
 
   console.log(`
 ${DIV}
@@ -555,8 +543,8 @@ export const buildWalletAndWaitForFunds = async (
     });
 
   // Show unshielded address immediately so user can fund via faucet while syncing
-  const DIV = "──────────────────────────────────────────────────────────────";
-  const faucet = faucetUrl(networkId);
+  const DIV = DIVIDER;
+  const faucet = faucetUrlFor(networkId);
   console.log(`
 ${DIV}
   Wallet Overview                            Network: ${networkId}
@@ -607,7 +595,7 @@ export const buildFreshWallet = async (
   config: Config,
 ): Promise<WalletContext> => {
   const seed = toHex(Buffer.from(generateRandomSeed()));
-  const DIV = "──────────────────────────────────────────────────────────────";
+  const DIV = DIVIDER;
   console.log(`
 ${DIV}
   New Wallet Seed — save this before continuing
@@ -846,16 +834,17 @@ export const revealRps = async (
 export const getRpsState = async (
   providers: RpsProviders,
   contractAddress: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Promise<any | null> => {
+): Promise<RpsLedgerState | null> => {
   assertIsContractAddress(contractAddress);
   logger.info("Checking RPS ledger state...");
   const state = await providers.publicDataProvider
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .queryContractState(contractAddress as any)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     .then((contractState) =>
-      contractState != null ? Rps.ledger(contractState.data as any) : null,
+      contractState != null
+        ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (Rps.ledger(contractState.data as any) as unknown as RpsLedgerState)
+        : null,
     );
   logger.info(
     `RPS state: ${JSON.stringify(state, (_k, v) => (v instanceof Uint8Array ? `0x${Buffer.from(v).toString("hex").slice(0, 8)}...` : v))}`,

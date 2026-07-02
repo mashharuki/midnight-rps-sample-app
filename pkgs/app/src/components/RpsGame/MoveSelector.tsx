@@ -1,9 +1,9 @@
-import { cn } from "@/lib/utils";
-import { RpsMove } from "@/lib/rps-types";
 import { CheckCircle2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { type RPS_MOVE_KEYS, RpsMove } from "@/lib/rps-types";
+import { cn } from "@/lib/utils";
 
-type MoveKey = "rock" | "paper" | "scissors";
+type MoveKey = (typeof RPS_MOVE_KEYS)[number];
 
 interface MoveConfig {
   move: RpsMove;

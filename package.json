@@ -12,11 +12,11 @@
     "contract": "bun run --cwd pkgs/contract",
     "dev": "bun run --cwd pkgs/app dev",
     "sync-keys-rps": "mkdir -p pkgs/app/public/managed/rps && cp -Rf pkgs/contract/src/managed/rps/keys pkgs/app/public/managed/rps/ && cp -Rf pkgs/contract/src/managed/rps/zkir pkgs/app/public/managed/rps/",
-    "build": "bun run --cwd pkgs/contract build && bun run sync-keys-rps && bun run --cwd pkgs/cli build && bun run --cwd pkgs/app build",
+    "build": "bun run --cwd pkgs/contract build && bun run sync-keys-rps && bun run --cwd pkgs/shared build && bun run --cwd pkgs/cli build && bun run --cwd pkgs/app build",
     "lint": "biome check .",
     "format": "biome format --write .",
     "test": "bun run --cwd pkgs/contract test",
-    "typecheck": "bun run --cwd pkgs/app build && bun run --cwd pkgs/cli typecheck && bun run --cwd pkgs/contract build"
+    "typecheck": "bun run --cwd pkgs/shared build && bun run --cwd pkgs/app build && bun run --cwd pkgs/cli typecheck && bun run --cwd pkgs/contract build"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.12",

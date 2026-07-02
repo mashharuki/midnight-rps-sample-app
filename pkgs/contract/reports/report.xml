@@ -1,41 +1,41 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<testsuites name="vitest tests" tests="18" failures="0" errors="0" time="0.965442417">
-    <testsuite name="src/test/rps.test.ts" timestamp="2026-04-30T07:22:49.409Z" hostname="kondouharuakiranoMacBook-Pro.local" tests="18" failures="0" errors="0" skipped="0" time="0.965442417">
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; initial ledger state &gt; starts in waiting state with no players joined" time="0.056362375">
+<testsuites name="vitest tests" tests="18" failures="0" errors="0" time="1.762648751">
+    <testsuite name="src/test/rps.test.ts" timestamp="2026-07-02T13:13:58.429Z" hostname="411a03d05639" tests="18" failures="0" errors="0" skipped="0" time="1.762648751">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; initial ledger state &gt; starts in waiting state with no players joined" time="0.102501375">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; rock vs rock → draw" time="0.062305042">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; rock vs rock → draw" time="0.140714375">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; rock vs paper → player2_wins" time="0.055524417">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; rock vs paper → player2_wins" time="0.079849417">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; rock vs scissors → player1_wins" time="0.053371291">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; rock vs scissors → player1_wins" time="0.082059083">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; paper vs rock → player1_wins" time="0.053213708">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; paper vs rock → player1_wins" time="0.080030708">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; paper vs paper → draw" time="0.054458292">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; paper vs paper → draw" time="0.107794958">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; paper vs scissors → player2_wins" time="0.053433708">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; paper vs scissors → player2_wins" time="0.107239">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; scissors vs rock → player2_wins" time="0.050154458">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; scissors vs rock → player2_wins" time="0.074838125">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; scissors vs paper → player1_wins" time="0.052470375">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; scissors vs paper → player1_wins" time="0.104104417">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; scissors vs scissors → draw" time="0.050008791">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; who_wins() — all 9 move combinations &gt; scissors vs scissors → draw" time="0.129820084">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; make_commit() — commitment binding and hiding &gt; binding: same move + same salt → identical commitment hash" time="0.059065959">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; make_commit() — commitment binding and hiding &gt; binding: same move + same salt → identical commitment hash" time="0.10414575">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; make_commit() — commitment binding and hiding &gt; hiding: same move + different salt → different commitment hash" time="0.059927541">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; make_commit() — commitment binding and hiding &gt; hiding: same move + different salt → different commitment hash" time="0.124829375">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; make_commit() — commitment binding and hiding &gt; hiding: different moves + same salt → different commitment hash" time="0.061051833">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; make_commit() — commitment binding and hiding &gt; hiding: different moves + same salt → different commitment hash" time="0.129087917">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; double-commit rejection (Req 1.4) &gt; no commit is accepted after both players are committed (P1 tries)" time="0.036570333">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; double-commit rejection (Req 1.4) &gt; no commit is accepted after both players are committed (P1 tries)" time="0.06286125">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; double-commit rejection (Req 1.4) &gt; no commit is accepted after both players are committed (P2 tries)" time="0.037237291">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; double-commit rejection (Req 1.4) &gt; no commit is accepted after both players are committed (P2 tries)" time="0.062967541">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; double-reveal rejection (Req 2.5) &gt; P1 cannot reveal a second time" time="0.049748375">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; double-reveal rejection (Req 2.5) &gt; P1 cannot reveal a second time" time="0.076879208">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; double-reveal rejection (Req 2.5) &gt; P2 cannot reveal after game is over" time="0.05500175">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; double-reveal rejection (Req 2.5) &gt; P2 cannot reveal after game is over" time="0.087498667">
         </testcase>
-        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; full game state progression &gt; state transitions: waiting → committed → finished" time="0.062922375">
+        <testcase classname="src/test/rps.test.ts" name="RPS smart contract &gt; full game state progression &gt; state transitions: waiting → committed → finished" time="0.100415791">
         </testcase>
     </testsuite>
 </testsuites>

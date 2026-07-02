@@ -13,13 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import {
-  type Config,
-  StandaloneConfig,
-  currentDir,
-  PreviewConfig,
-  PreprodConfig,
-} from "../config";
+import { unshieldedToken } from "@midnight-ntwrk/ledger-v8";
+import path from "path";
+import type { Logger } from "pino";
+import * as Rx from "rxjs";
 import {
   DockerComposeEnvironment,
   GenericContainer,
@@ -27,16 +24,18 @@ import {
   type StartedTestContainer,
   Wait,
 } from "testcontainers";
-import path from "path";
-import * as api from "../api";
-import * as Rx from "rxjs";
-import { unshieldedToken } from "@midnight-ntwrk/ledger-v8";
-import type { Logger } from "pino";
-import type { WalletContext } from "../api";
 import { expect } from "vitest";
-
-const GENESIS_MINT_WALLET_SEED =
-  "0000000000000000000000000000000000000000000000000000000000000001";
+import type { WalletContext } from "../api";
+import * as api from "../api";
+import {
+  type Config,
+  currentDir,
+  PreprodConfig,
+  PreviewConfig,
+  StandaloneConfig,
+} from "../config";
+import { GENESIS_MINT_WALLET_SEED } from "../constants";
+import { mapContainerPort } from "../docker-utils";
 
 export interface TestConfiguration {
   seed: string;
@@ -157,22 +156,22 @@ export class TestEnvironment {
 
       this.testConfig.dappConfig = {
         ...this.testConfig.dappConfig,
-        indexer: TestEnvironment.mapContainerPort(
+        indexer: mapContainerPort(
           this.env,
           this.testConfig.dappConfig.indexer,
           "rps-indexer",
         ),
-        indexerWS: TestEnvironment.mapContainerPort(
+        indexerWS: mapContainerPort(
           this.env,
           this.testConfig.dappConfig.indexerWS,
           "rps-indexer",
         ),
-        node: TestEnvironment.mapContainerPort(
+        node: mapContainerPort(
           this.env,
           this.testConfig.dappConfig.node,
           "rps-node",
         ),
-        proofServer: TestEnvironment.mapContainerPort(
+        proofServer: mapContainerPort(
           this.env,
           this.testConfig.dappConfig.proofServer,
           "rps-proof-server",
@@ -182,19 +181,6 @@ export class TestEnvironment {
     this.logger.info(`Configuration:${JSON.stringify(this.testConfig)}`);
     this.logger.info("Test containers started");
     return this.testConfig;
-  };
-
-  static mapContainerPort = (
-    env: StartedDockerComposeEnvironment,
-    url: string,
-    containerName: string,
-  ) => {
-    const mappedUrl = new URL(url);
-    const container = env.getContainer(containerName);
-
-    mappedUrl.port = String(container.getFirstMappedPort());
-
-    return mappedUrl.toString().replace(/\/+$/, "");
   };
 
   static getProofServerContainer = async (_env: string) =>

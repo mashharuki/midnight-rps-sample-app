@@ -2,11 +2,9 @@
 // 通貨
 // ---------------------------------------------------------------------------
 
-/** Midnight の最小通貨単位。1 tDUST = 10^9 base units */
-export const DENOMINATION = 1_000_000_000n;
-
-/** 通貨単位の表示文字列 */
-export const CURRENCY_UNIT = "tDUST";
+// DENOMINATION / CURRENCY_UNIT は pkgs/cli とも共有し得る Midnight ネットワーク
+// 共通の定数のため pkgs/shared に定義している。
+export { CURRENCY_UNIT, DENOMINATION } from "shared";
 
 // ---------------------------------------------------------------------------
 // Lace Wallet 接続設定

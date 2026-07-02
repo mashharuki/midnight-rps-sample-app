@@ -65,24 +65,25 @@ Skills are located in `.claude/skills/kiro-*/SKILL.md`
 
 # Project Guide: midnight-rps-sample-app
 
-A Rock-Paper-Scissors dApp on Midnight (privacy-focused blockchain) demonstrating a ZK commit/reveal scheme. Bun workspace monorepo with three packages:
+A Rock-Paper-Scissors dApp on Midnight (privacy-focused blockchain) demonstrating a ZK commit/reveal scheme. Bun workspace monorepo with four packages:
 
 | Package | Role |
 |---|---|
 | `pkgs/contract` | Compact smart contract (`src/rps.compact`) + witnesses + Vitest simulator tests |
+| `pkgs/shared` | Pure-TS lib shared by `cli`/`app`: RPS domain types/enums (`rps-types.ts`), per-network endpoint config (`network-config.ts`), currency constants (`currency.ts`) |
 | `pkgs/cli` | Headless Node.js CLI — deploys/joins/plays via a local HD wallet (no browser) |
 | `pkgs/app` | React + Vite browser dApp — connects via Lace Wallet extension |
 
-`pkgs/cli` and `pkgs/app` are two independent front-ends over the same contract; they duplicate wallet/provider setup rather than sharing it (no shared `pkgs/sdk`).
+`pkgs/cli` and `pkgs/app` are two independent front-ends over the same contract. They intentionally duplicate wallet/provider setup (HD wallet + Node zk-config vs. Lace connector + fetch-based zk-config are genuinely different per environment) — do not try to unify that. What *is* shared lives in `pkgs/shared`: RPS enums/ledger-state types, `RpsProviders`/`DeployedRpsContract` type aliases, network endpoint URLs (indexer/node/faucet), and currency constants. Both `cli` and `app` depend on `pkgs/shared` as a workspace package (`shared: workspace:*` / `shared: *`), built the same way as `pkgs/contract` (`tsc` to `dist/`, consumed as compiled output) — build it before `cli`/`app`.
 
 ## Common Commands
 
 ```bash
 bun install                                # install all workspaces
 bun contract compact                       # compile rps.compact -> pkgs/contract/src/managed/rps (do this first)
-bun run build                              # full pipeline: contract build -> sync-keys-rps -> cli build -> app build
+bun run build                              # full pipeline: contract build -> sync-keys-rps -> shared build -> cli build -> app build
 bun run test                               # pkgs/contract Vitest suite (bun run --cwd pkgs/contract test to scope one package)
-bun run typecheck                          # app build + cli typecheck + contract build (tsc --noEmit, no bundling)
+bun run typecheck                          # shared build + app build + cli typecheck + contract build (tsc --noEmit, no bundling)
 bun run lint / bun run format              # biome check / biome format --write (root); eslint also runs per-package via `<pkg> lint`
 bun cli preprod | preprod-ps               # CLI deploy/play on Preprod (-ps = auto-start local proof server)
 bun cli preview | preview-ps               # same, on Preview (fewer historical events, faster wallet sync)
@@ -96,9 +97,9 @@ Compact toolchain: install via `compact-installer.sh`, then `compact update 0.30
 
 - **Game logic**: `pkgs/contract/src/rps.compact` implements commit → reveal → settle. `rps-witnesses.ts` supplies the private witnesses (move + salt) consumed by both `pkgs/cli` and `pkgs/app`.
 - **ZK artifacts are network-independent**: `pkgs/contract`'s `managed/rps` (zkir + keys) is compiled once and copied into both the CLI build and `pkgs/app/public/managed/rps` (via the root `sync-keys-rps` script). Switching networks never requires recompiling the contract.
-- **Network configuration lives in two parallel places** — keep them in sync when adding a network:
-  - CLI: `pkgs/cli/src/config.ts` (`PreprodConfig`/`PreviewConfig`, each calls `setNetworkId()` and owns indexer/node/proofServer URLs)
-  - App: `pkgs/app/src/utils/networks.ts` (`NETWORKS` map + `NetworkContext`/`useNetwork()`); the user picks a network in `ConnectSection` *before* connecting Lace, since Lace itself decides whether it can honor `connect(networkId)`
+- **Network endpoint URLs (indexer/node/faucet) are a single source of truth**: `pkgs/shared/src/network-config.ts` (`MIDNIGHT_NETWORK_ENDPOINTS`, `DEFAULT_PROOF_SERVER_URL`). Add a new network there first, then wire it into both front-ends — never hardcode a URL in `cli` or `app` directly:
+  - CLI: `pkgs/cli/src/config.ts` (`PreprodConfig`/`PreviewConfig` read from `MIDNIGHT_NETWORK_ENDPOINTS`, call `setNetworkId()`, and additionally own `logDir`)
+  - App: `pkgs/app/src/utils/networks.ts` (`NETWORKS` map built from `MIDNIGHT_NETWORK_ENDPOINTS` + app-only `label`) + `NetworkContext`/`useNetwork()`; the user picks a network in `ConnectSection` *before* connecting Lace, since Lace itself decides whether it can honor `connect(networkId)`
 - **Proof server is shared infrastructure**, not per-network: `pkgs/cli/proof-server.yml` hard-binds host port 6300. `pkgs/cli/src/preprod-start-proof-server.ts` / `preview-start-proof-server.ts` check `isProofServerRunning()` (`pkgs/cli/src/proof-server-utils.ts`) before spinning up a new Docker container, so re-running `*-ps` while a proof server is already up reuses it instead of failing on a port conflict.
 - **CLI wallet caching**: `pkgs/cli/src/api.ts` persists shielded/unshielded/dust wallet snapshots per network under `pkgs/cli/wallet-cache/<network>/<seed-prefix>/`. Do **not** reintroduce a "fast-start"/birthday-offset optimization that rewrites a snapshot's `offset` to skip historical event scanning — it was tried and removed because the zswap commitment tree requires strictly sequential inserts from index 0; patching the offset without the matching tree state corrupts sync (`values inserted non-linearly into zswap commitment tree`). A full genesis sync is the only correct behavior here.
 - **App-side network isolation**: `pkgs/app` scopes the cached RPS contract address (`useRpsGame.ts`) and the private-state store name (`providers.ts`) by `networkId`, so switching networks in the UI can't leak a contract address or private move/salt state from the other network.

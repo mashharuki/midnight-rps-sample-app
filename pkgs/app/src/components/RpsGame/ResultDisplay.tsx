@@ -1,7 +1,7 @@
-import type { RpsLedgerState } from "@/lib/rps-types";
-import { RpsGameResult, RpsMove } from "@/lib/rps-types";
 import { Minus, RotateCcw, Trophy, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import type { RpsLedgerState } from "@/lib/rps-types";
+import { RPS_MOVE_KEYS, RpsGameResult, RpsMove } from "@/lib/rps-types";
 
 function uint8ToHex(arr: Uint8Array): string {
   return Array.from(arr)
@@ -13,14 +13,6 @@ function getMoveEmoji(move: RpsMove): string {
   if (move === RpsMove.rock) return "🪨";
   if (move === RpsMove.paper) return "🖐";
   return "✌️";
-}
-
-type MoveKey = "rock" | "paper" | "scissors";
-
-function getMoveKey(move: RpsMove): MoveKey {
-  if (move === RpsMove.rock) return "rock";
-  if (move === RpsMove.paper) return "paper";
-  return "scissors";
 }
 
 function getMoveColor(move: RpsMove): string {
@@ -88,7 +80,7 @@ export function ResultDisplay({
         <MoveCard
           move={myMove}
           label={t("rps.result.yourMove")}
-          moveLabel={t(`rps.moves.${getMoveKey(myMove)}`)}
+          moveLabel={t(`rps.moves.${RPS_MOVE_KEYS[myMove]}`)}
           isWinner={didWin}
           winnerLabel={t("rps.result.winner")}
         />
@@ -96,7 +88,7 @@ export function ResultDisplay({
         <MoveCard
           move={opponentMove}
           label={t("rps.result.opponentMove")}
-          moveLabel={t(`rps.moves.${getMoveKey(opponentMove)}`)}
+          moveLabel={t(`rps.moves.${RPS_MOVE_KEYS[opponentMove]}`)}
           isWinner={didLose}
           winnerLabel={t("rps.result.winner")}
         />

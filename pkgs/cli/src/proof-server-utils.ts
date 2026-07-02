@@ -21,7 +21,9 @@ import net from "node:net";
  * already listening on that port, the new container fails to bind it. Checking
  * first lets callers reuse an already-running proof server instead of racing it.
  */
-export const isProofServerRunning = (proofServerUrl: string): Promise<boolean> => {
+export const isProofServerRunning = (
+  proofServerUrl: string,
+): Promise<boolean> => {
   const { hostname, port } = new URL(proofServerUrl);
   return new Promise((resolve) => {
     const socket = net.createConnection({

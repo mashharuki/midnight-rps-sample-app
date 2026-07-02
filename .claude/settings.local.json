@@ -55,7 +55,11 @@
       "Bash(cat /proc/meminfo | head -5; echo \"---\"; docker inspect 411a03d05639 --format 'Memory: {{.HostConfig.Memory}} MemorySwap: {{.HostConfig.MemorySwap}}' 2>/dev/null || echo \"cannot inspect self\")",
       "Read(//proc/**)",
       "Bash(timeout 20 node -e ' *)",
-      "Bash(rm -rf /workspaces/midnight-rps-sample-app/pkgs/cli/wallet-cache/preprod/* && find /workspaces/midnight-rps-sample-app/pkgs/cli/wallet-cache -mindepth 1)"
+      "Bash(rm -rf /workspaces/midnight-rps-sample-app/pkgs/cli/wallet-cache/preprod/* && find /workspaces/midnight-rps-sample-app/pkgs/cli/wallet-cache -mindepth 1)",
+      "Bash(python3 -)",
+      "Bash(bunx vitest *)",
+      "Bash(bun x *)",
+      "Bash(git stash *)"
     ],
     "additionalDirectories": [
       "/workspaces/midnight-rps-sample-app/pkgs/cli/wallet-cache/preprod"

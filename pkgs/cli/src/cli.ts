@@ -13,26 +13,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-import { type WalletContext } from "./api";
 import { stdin as input, stdout as output } from "node:process";
 import { createInterface, type Interface } from "node:readline/promises";
-import { type Logger } from "pino";
+import type { Logger } from "pino";
 import {
-  type StartedDockerComposeEnvironment,
-  type DockerComposeEnvironment,
+  type DeployedRpsContract,
+  RPS_GAME_RESULT_KEYS,
+  RPS_GAME_STATE_KEYS,
+  RPS_MOVE_KEYS,
+  type RpsProviders,
+} from "shared";
+import type {
+  DockerComposeEnvironment,
+  StartedDockerComposeEnvironment,
 } from "testcontainers";
-import { type RpsProviders, type DeployedRpsContract } from "./common-types";
-import { type Config, StandaloneConfig } from "./config";
+import type { WalletContext } from "./api";
 import * as api from "./api";
+import { type Config, StandaloneConfig } from "./config";
+import { DIVIDER, GENESIS_MINT_WALLET_SEED } from "./constants";
+import { mapContainerPort } from "./docker-utils";
 
 let logger: Logger;
-
-/**
- * This seed gives access to tokens minted in the genesis block of a local development node.
- * Only used in standalone networks to build a wallet with initial funds.
- */
-const GENESIS_MINT_WALLET_SEED =
-  "0000000000000000000000000000000000000000000000000000000000000001";
 
 // ─── Display Helpers ────────────────────────────────────────────────────────
 
@@ -45,9 +46,6 @@ const BANNER = `
 ║                                                              ║
 ╚══════════════════════════════════════════════════════════════╝
 `;
-
-const DIVIDER =
-  "──────────────────────────────────────────────────────────────";
 
 // ─── Menu Helpers ──────────────────────────────────────────────────────────
 
@@ -170,6 +168,9 @@ ${DIVIDER}
 ${"─".repeat(62)}
 > `;
 
+const capitalize = (s: string): string =>
+  s.charAt(0).toUpperCase() + s.slice(1);
+
 /** Ask the user to select rock / paper / scissors. Returns 0 / 1 / 2. */
 const selectMove = async (rli: Interface): Promise<number | null> => {
   while (true) {
@@ -267,10 +268,10 @@ const rpsMainLoop = async (
       case "1": {
         const move = await selectMove(rli);
         if (move === null) break;
-        const moveNames = ["Rock", "Paper", "Scissors"];
+        const moveLabel = capitalize(RPS_MOVE_KEYS[move]);
         try {
           await api.withStatus(
-            `Committing move (${moveNames[move]}) — generating ZK proof`,
+            `Committing move (${moveLabel}) — generating ZK proof`,
             () => api.commitRps(providers, rpsContract, move),
           );
         } catch (e) {
@@ -295,21 +296,14 @@ const rpsMainLoop = async (
           if (state == null) {
             console.log("  No state found at this contract address.\n");
           } else {
-            const stateNames = ["waiting", "committed", "finished"];
-            const resultNames = [
-              "not_determined",
-              "player1_wins",
-              "player2_wins",
-              "draw",
-            ];
             console.log(`
-  Game State:   ${stateNames[state.state] ?? state.state}
+  Game State:   ${RPS_GAME_STATE_KEYS[state.state] ?? state.state}
   Game Over:    ${state.game_over}
   P1 Joined:   ${state.p1_joined}
   P2 Joined:   ${state.p2_joined}
   P1 Revealed: ${state.p1_revealed}
   P2 Revealed: ${state.p2_revealed}
-  Result:       ${resultNames[state.result] ?? state.result}
+  Result:       ${RPS_GAME_RESULT_KEYS[state.result] ?? state.result}
 `);
           }
         } catch (e) {
@@ -323,20 +317,6 @@ const rpsMainLoop = async (
         console.log(`  Invalid choice: ${choice}`);
     }
   }
-};
-
-// ─── Docker Port Mapping ────────────────────────────────────────────────────
-
-/** Map a container's first exposed port into the config URL. */
-const mapContainerPort = (
-  env: StartedDockerComposeEnvironment,
-  url: string,
-  containerName: string,
-) => {
-  const mappedUrl = new URL(url);
-  const container = env.getContainer(containerName);
-  mappedUrl.port = String(container.getFirstMappedPort());
-  return mappedUrl.toString().replace(/\/+$/, "");
 };
 
 // ─── Entry Point ────────────────────────────────────────────────────────────

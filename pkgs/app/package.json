@@ -32,6 +32,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "contract": "workspace:*",
+    "shared": "workspace:*",
     "i18next": "^26.0.7",
     "lucide-react": "^1.8.0",
     "next-themes": "^0.4.6",
