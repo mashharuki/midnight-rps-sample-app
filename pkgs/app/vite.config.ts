@@ -318,6 +318,16 @@ export default defineConfig({
     commonjsOptions: {
       transformMixedEsModules: true,
       include: [/node_modules/],
+      // Without this, @rollup/plugin-commonjs sometimes only partially wraps a
+      // CJS module (e.g. the `util` polyfill pulled in by node-stdlib-browser's
+      // `vm` -> vm-browserify -> util chain): helper sub-modules get wrapped in
+      // an IIFE, but the entry file's top-level `exports.foo = ...` assignments
+      // are left as bare `exports` references with no local binding, which
+      // throws "exports is not defined" at runtime in the browser (ES modules
+      // have no implicit `exports`, unlike Node's CJS loader). strictRequires
+      // forces every CJS module to execute inside a proper function scope like
+      // Node does, so `exports`/`module`/`require` are always locally bound.
+      strictRequires: true,
     },
   },
   worker: {
