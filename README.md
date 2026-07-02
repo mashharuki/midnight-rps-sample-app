@@ -257,3 +257,31 @@ Deployed Contract Address info
 ```bash
 bun app dev
 ```
+
+### Deploy `pkgs/app` to Vercel
+
+Only `pkgs/app` (the browser dApp) is deployed to Vercel; `pkgs/cli` is a headless Node.js tool and is never deployed. The repo root includes a [`vercel.json`](vercel.json) so a fresh clone builds correctly as a Bun workspace:
+
+```json
+{
+  "installCommand": "bun install",
+  "buildCommand": "bun run build:app",
+  "outputDirectory": "pkgs/app/dist"
+}
+```
+
+Steps:
+1. Import the GitHub repo in the Vercel dashboard (or run `vercel` from the repo root with the Vercel CLI).
+2. Leave **Root Directory** at the repo root (default) — do **not** set it to `pkgs/app`, since the build needs to compile `pkgs/contract` and `pkgs/shared` first and copy their output into `pkgs/app` before `vite build` runs.
+3. `bun run build:app` (see `package.json`) runs: `pkgs/contract` build → `sync-keys-rps` (copies ZK keys/circuits into `pkgs/app/public/managed/rps`) → `pkgs/shared` build → `pkgs/app` build. It skips `pkgs/cli` on purpose — Vercel only needs the app.
+4. The compiled Compact contract (`pkgs/contract/src/managed/rps/**`) is committed to git, so Vercel's build does **not** need the `compact` CLI toolchain — plain `tsc` + `vite build` is enough.
+
+**Proof server caveat**: in production, `pkgs/app` sends proof requests to the same-origin path `/proof-server` (see `pkgs/app/src/lib/providers.ts`) — this exists to work around Lace's service worker blocking direct `fetch()` calls to a different origin. Locally, Vite's dev server proxies that path to `http://127.0.0.1:6300` (see `server.proxy` in `pkgs/app/vite.config.ts`); on Vercel there is no such proxy yet, so wallet connection and UI browsing work, but `commit`/`reveal` (which need a ZK prover) will fail until you have a **publicly reachable, HTTPS proof server**. Once you do, add a rewrite to `vercel.json`:
+
+```json
+{
+  "rewrites": [
+    { "source": "/proof-server/:path*", "destination": "https://<your-public-proof-server-host>/:path*" }
+  ]
+}
+```
