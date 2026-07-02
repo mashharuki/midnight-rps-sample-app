@@ -9,7 +9,13 @@
       "Bash(npm run lint)",
       "Bash(npm run build)",
       "Bash(npm run test:*)",
-      "Read(~/.zshrc)"
+      "Read(~/.zshrc)",
+      "Bash(node probe.mjs pre-refactor-check/pkgs/app/dist/assets/index-CJpTfZcu.js)",
+      "Bash(sed -i 's#sandbox.fetch = \\(\\) => Promise.reject\\(new Error\\(\"no fetch in probe\"\\)\\);#sandbox.fetch = \\(\\) => new Promise\\(\\(\\) => {}\\);#' probe.mjs)",
+      "Bash(sed -i 's/}, 2000\\);/}, 5000\\);/' probe.mjs)",
+      "Bash(node probe.mjs /workspaces/midnight-rps-sample-app/pkgs/app/dist/assets/index-BSwpKX1O.js)",
+      "Bash(sed -i '1i process.on\\(\"unhandledRejection\", \\(e\\) => { console.log\\(\"=== UNHANDLED REJECTION ===\"\\); console.log\\(e && e.stack || e\\); }\\);\\\\nprocess.on\\(\"uncaughtException\", \\(e\\) => { console.log\\(\"=== UNCAUGHT EXCEPTION ===\"\\); console.log\\(e && e.stack || e\\); }\\);' probe.mjs)",
+      "Bash(sed -i \"s/document.getElementById = \\(\\) => null;/document.getElementById = \\(\\) => makeAutoStub\\(\\\\\"rootEl\\\\\"\\);/\" probe.mjs)"
     ],
     "deny": [
       "Bash(curl:*)",
@@ -18,11 +24,11 @@
       "Read(./secrets/**)"
     ]
   },
-  "enabledPlugins": {
-    "example-skills@anthropic-agent-skills": true
-  },
   "statusLine": {
     "type": "command",
     "command": "bun x ccusage statusline"
+  },
+  "enabledPlugins": {
+    "example-skills@anthropic-agent-skills": true
   }
 }
