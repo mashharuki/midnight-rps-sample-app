@@ -59,3 +59,56 @@ Skills are located in `.claude/skills/kiro-*/SKILL.md`
 - Load entire `.kiro/steering/` as project memory
 - Default files: `product.md`, `tech.md`, `structure.md`
 - Custom files are supported (managed via `/kiro-steering-custom`)
+- Note: `.kiro/steering/` has not been initialized yet in this repo — run `/kiro-steering` before relying on it. Until then, this file plus `.kiro/specs/midnight-rps-dapp/` (requirements/design/tasks, approved) are the source of truth.
+
+---
+
+# Project Guide: midnight-rps-sample-app
+
+A Rock-Paper-Scissors dApp on Midnight (privacy-focused blockchain) demonstrating a ZK commit/reveal scheme. Bun workspace monorepo with three packages:
+
+| Package | Role |
+|---|---|
+| `pkgs/contract` | Compact smart contract (`src/rps.compact`) + witnesses + Vitest simulator tests |
+| `pkgs/cli` | Headless Node.js CLI — deploys/joins/plays via a local HD wallet (no browser) |
+| `pkgs/app` | React + Vite browser dApp — connects via Lace Wallet extension |
+
+`pkgs/cli` and `pkgs/app` are two independent front-ends over the same contract; they duplicate wallet/provider setup rather than sharing it (no shared `pkgs/sdk`).
+
+## Common Commands
+
+```bash
+bun install                                # install all workspaces
+bun contract compact                       # compile rps.compact -> pkgs/contract/src/managed/rps (do this first)
+bun run build                              # full pipeline: contract build -> sync-keys-rps -> cli build -> app build
+bun run test                               # pkgs/contract Vitest suite (bun run --cwd pkgs/contract test to scope one package)
+bun run typecheck                          # app build + cli typecheck + contract build (tsc --noEmit, no bundling)
+bun run lint / bun run format              # biome check / biome format --write (root); eslint also runs per-package via `<pkg> lint`
+bun cli preprod | preprod-ps               # CLI deploy/play on Preprod (-ps = auto-start local proof server)
+bun cli preview | preview-ps               # same, on Preview (fewer historical events, faster wallet sync)
+bun app dev                                # Vite dev server for the browser app
+docker compose -f pkgs/cli/proof-server.yml up   # start proof server manually (needed by both cli and app)
+```
+
+Compact toolchain: install via `compact-installer.sh`, then `compact update 0.30.0` — the contract is pinned to compactc 0.30.0 (language 0.22); newer compactc versions fail the pragma check. See root `README.md` for the full setup and Devcontainer instructions.
+
+## Architecture Notes
+
+- **Game logic**: `pkgs/contract/src/rps.compact` implements commit → reveal → settle. `rps-witnesses.ts` supplies the private witnesses (move + salt) consumed by both `pkgs/cli` and `pkgs/app`.
+- **ZK artifacts are network-independent**: `pkgs/contract`'s `managed/rps` (zkir + keys) is compiled once and copied into both the CLI build and `pkgs/app/public/managed/rps` (via the root `sync-keys-rps` script). Switching networks never requires recompiling the contract.
+- **Network configuration lives in two parallel places** — keep them in sync when adding a network:
+  - CLI: `pkgs/cli/src/config.ts` (`PreprodConfig`/`PreviewConfig`, each calls `setNetworkId()` and owns indexer/node/proofServer URLs)
+  - App: `pkgs/app/src/utils/networks.ts` (`NETWORKS` map + `NetworkContext`/`useNetwork()`); the user picks a network in `ConnectSection` *before* connecting Lace, since Lace itself decides whether it can honor `connect(networkId)`
+- **Proof server is shared infrastructure**, not per-network: `pkgs/cli/proof-server.yml` hard-binds host port 6300. `pkgs/cli/src/preprod-start-proof-server.ts` / `preview-start-proof-server.ts` check `isProofServerRunning()` (`pkgs/cli/src/proof-server-utils.ts`) before spinning up a new Docker container, so re-running `*-ps` while a proof server is already up reuses it instead of failing on a port conflict.
+- **CLI wallet caching**: `pkgs/cli/src/api.ts` persists shielded/unshielded/dust wallet snapshots per network under `pkgs/cli/wallet-cache/<network>/<seed-prefix>/`. Do **not** reintroduce a "fast-start"/birthday-offset optimization that rewrites a snapshot's `offset` to skip historical event scanning — it was tried and removed because the zswap commitment tree requires strictly sequential inserts from index 0; patching the offset without the matching tree state corrupts sync (`values inserted non-linearly into zswap commitment tree`). A full genesis sync is the only correct behavior here.
+- **App-side network isolation**: `pkgs/app` scopes the cached RPS contract address (`useRpsGame.ts`) and the private-state store name (`providers.ts`) by `networkId`, so switching networks in the UI can't leak a contract address or private move/salt state from the other network.
+- Devcontainer memory is limited (~7.7GB total) — `pkgs/cli`'s network-connecting scripts run Node with `--max-old-space-size=4096`; don't raise this without checking available memory first (an 8192 setting previously caused the OOM killer to SIGKILL the process mid-sync).
+
+## Relevant Skills
+
+Invoke proactively when the task matches (see the full skill list in your tool context for others):
+- `midnight-deploy` / `midnight-infra-setup` — proof server / Docker infra, preprod/preview/standalone deployment
+- `midnight-sdk-guide` — headless CLI wallet/provider patterns (`pkgs/cli`)
+- `midnight-lace-dapp` — browser dApp + Lace Wallet integration patterns (`pkgs/app`)
+- `midnight-compact-guide` — writing/reviewing `rps.compact`
+- `midnight-test-runner` — running/debugging the Vitest contract simulator tests
