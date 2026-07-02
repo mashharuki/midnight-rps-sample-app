@@ -1,3 +1,8 @@
+import { setNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
+import i18next from "i18next";
+import type React from "react";
+import { useCallback, useState } from "react";
+import { toast } from "sonner";
 import {
   connectToWallet,
   NetworkMismatchError,
@@ -6,10 +11,7 @@ import {
   WalletNotFoundError,
   WalletTimeoutError,
 } from "@/lib/wallet";
-import { setNetworkId } from "@midnight-ntwrk/midnight-js-network-id";
-import i18next from "i18next";
-import React, { useCallback, useEffect, useState } from "react";
-import { toast } from "sonner";
+import { useNetwork } from "./useNetwork";
 import { WalletContext, type WalletState } from "./walletContextDef";
 
 /**
@@ -26,12 +28,7 @@ import { WalletContext, type WalletState } from "./walletContextDef";
  */
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<WalletState>({ status: "disconnected" });
-
-  // ネットワーク ID をグローバルに設定する（環境変数 VITE_NETWORK_ID で切替可能）
-  useEffect(() => {
-    const id: string = import.meta.env.VITE_NETWORK_ID ?? "TestNet";
-    setNetworkId(id);
-  }, []);
+  const { networkId } = useNetwork();
 
   /**
    * ウォレットに接続する関数。接続中は状態を "connecting" にしてボタンを無効化。
@@ -42,8 +39,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const connect = useCallback(async () => {
     setState({ status: "connecting" });
     try {
-      // 接続
-      const connection = await connectToWallet();
+      // NetworkContext で選択中のネットワークを SDK に反映してから接続する
+      setNetworkId(networkId);
+      const connection = await connectToWallet(networkId);
       setState({ status: "connected", connection });
     } catch (e: unknown) {
       setState({ status: "error" });
@@ -63,7 +61,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         toast.error(i18next.t("error.connectGeneric"));
       }
     }
-  }, []);
+  }, [networkId]);
 
   /**
    * ウォレットから切断する関数。状態を "disconnected" にリセットするだけで、ウォレット側のセッション破棄は不要。

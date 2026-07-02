@@ -5,7 +5,7 @@ const en = {
     versionMismatch:
       "Lace Wallet version ({{version}}) is outdated. Please update to the latest version.",
     networkMismatch:
-      "Network mismatch. Please select PreProd in Lace Settings.",
+      "Network mismatch. Please select {{network}} in Lace Settings.",
     userRejected: "Wallet connection was cancelled.",
     walletTimeout:
       "Connection timed out. Please unlock Lace Wallet and try again.",
@@ -26,6 +26,7 @@ const en = {
     shielded: "Shielded",
     unshielded: "Unshielded",
     dust: "Dust",
+    selectNetwork: "Select Network",
   },
   aria: {
     copyAddress: "Copy address",
@@ -38,7 +39,7 @@ const en = {
     disconnect: "Disconnect",
   },
   app: {
-    subtitle: "Connect your Lace Wallet to access Midnight Network (PreProd)",
+    subtitle: "Connect your Lace Wallet to access Midnight Network",
   },
   toast: {
     copySuccess: "Address copied to clipboard",

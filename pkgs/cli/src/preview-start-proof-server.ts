@@ -16,16 +16,25 @@
 import { createLogger } from "./logger-utils.js";
 import { run } from "./cli.js";
 import { currentDir, PreviewConfig } from "./config.js";
+import { isProofServerRunning } from "./proof-server-utils.js";
 import { DockerComposeEnvironment, Wait } from "testcontainers";
 import path from "node:path";
 
 const config = new PreviewConfig();
-const dockerEnv = new DockerComposeEnvironment(
-  path.resolve(currentDir, ".."),
-  "proof-server.yml",
-).withWaitStrategy(
-  "proof-server-1",
-  Wait.forLogMessage("Actix runtime found; starting in Actix runtime", 1).withStartupTimeout(300_000),
-);
 const logger = await createLogger(config.logDir);
-await run(config, logger, dockerEnv);
+
+if (await isProofServerRunning(config.proofServer)) {
+  logger.info(
+    `A proof server is already running at ${config.proofServer}; reusing it instead of starting a new one.`,
+  );
+  await run(config, logger);
+} else {
+  const dockerEnv = new DockerComposeEnvironment(
+    path.resolve(currentDir, ".."),
+    "proof-server.yml",
+  ).withWaitStrategy(
+    "proof-server-1",
+    Wait.forLogMessage("Actix runtime found; starting in Actix runtime", 1).withStartupTimeout(300_000),
+  );
+  await run(config, logger, dockerEnv);
+}

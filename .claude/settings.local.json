@@ -38,7 +38,27 @@
       "Bash(bunx bun-lockb-decode *)",
       "Bash(bun /private/tmp/test-ledger.ts --cwd /Users/harukikondo/git/midnight-rps-sample-app/pkgs/cli)",
       "Bash(docker rm *)",
-      "Bash(compact compile *)"
+      "Bash(compact compile *)",
+      "Bash(dmesg)",
+      "Bash(python3 -m json.tool)",
+      "Read(//sys/fs/cgroup/**)",
+      "Bash(ulimit -a)",
+      "Bash(echo \"EXIT_CODE=$?\")",
+      "Bash(docker network *)",
+      "Bash(bunx biome *)",
+      "Bash(node --loader ts-node/esm -e ' *)",
+      "Bash(timeout 2 bash -c \"cat < /dev/null > /dev/tcp/127.0.0.1/6300\")",
+      "Bash(docker port *)",
+      "Bash(netstat -tlnp)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(journalctl -k --no-pager)",
+      "Bash(cat /proc/meminfo | head -5; echo \"---\"; docker inspect 411a03d05639 --format 'Memory: {{.HostConfig.Memory}} MemorySwap: {{.HostConfig.MemorySwap}}' 2>/dev/null || echo \"cannot inspect self\")",
+      "Read(//proc/**)",
+      "Bash(timeout 20 node -e ' *)",
+      "Bash(rm -rf /workspaces/midnight-rps-sample-app/pkgs/cli/wallet-cache/preprod/* && find /workspaces/midnight-rps-sample-app/pkgs/cli/wallet-cache -mindepth 1)"
+    ],
+    "additionalDirectories": [
+      "/workspaces/midnight-rps-sample-app/pkgs/cli/wallet-cache/preprod"
     ]
   }
 }

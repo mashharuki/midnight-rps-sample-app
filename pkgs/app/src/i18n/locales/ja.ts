@@ -5,7 +5,7 @@ const ja = {
     versionMismatch:
       "Lace Wallet のバージョン ({{version}}) が古いです。最新版に更新してください。",
     networkMismatch:
-      "ネットワークが一致しません。Lace Settings で PreProd を選択してください。",
+      "ネットワークが一致しません。Lace Settings で {{network}} を選択してください。",
     userRejected: "ウォレット接続がキャンセルされました。",
     walletTimeout:
       "接続タイムアウト。Lace Wallet のロックを解除してから再試行してください。",
@@ -26,6 +26,7 @@ const ja = {
     shielded: "Shielded",
     unshielded: "Unshielded",
     dust: "Dust",
+    selectNetwork: "ネットワークを選択",
   },
   aria: {
     copyAddress: "アドレスをコピー",
@@ -38,8 +39,7 @@ const ja = {
     disconnect: "切断する",
   },
   app: {
-    subtitle:
-      "Lace Wallet を接続して Midnight Network (PreProd) にアクセスしてください",
+    subtitle: "Lace Wallet を接続して Midnight Network にアクセスしてください",
   },
   toast: {
     copySuccess: "アドレスをコピーしました",

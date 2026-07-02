@@ -1,15 +1,3 @@
-import {
-  COMPATIBLE_CONNECTOR_VERSION,
-  DETECT_TIMEOUT_MS,
-  FALLBACK_URIS,
-  NETWORK_CANDIDATES,
-  POLL_INTERVAL_MS,
-} from "@/utils/constants";
-import type {
-  LaceLegacyConnector,
-  LaceV4Connector,
-  WalletConnectionResult,
-} from "@/utils/types";
 import type {
   DAppConnectorAPI,
   DAppConnectorWalletAPI,
@@ -18,6 +6,17 @@ import type {
 import i18next from "i18next";
 import { filter, firstValueFrom, interval, map, take, timeout } from "rxjs";
 import semver from "semver";
+import {
+  COMPATIBLE_CONNECTOR_VERSION,
+  DETECT_TIMEOUT_MS,
+  POLL_INTERVAL_MS,
+} from "@/utils/constants";
+import { NETWORKS, type NetworkId } from "@/utils/networks";
+import type {
+  LaceLegacyConnector,
+  LaceV4Connector,
+  WalletConnectionResult,
+} from "@/utils/types";
 
 export class WalletNotFoundError extends Error {
   constructor() {
@@ -34,8 +33,8 @@ export class VersionMismatchError extends Error {
 }
 
 export class NetworkMismatchError extends Error {
-  constructor() {
-    super(i18next.t("error.networkMismatch"));
+  constructor(networkLabel: string) {
+    super(i18next.t("error.networkMismatch", { network: networkLabel }));
     this.name = "NetworkMismatchError";
   }
 }
@@ -86,69 +85,48 @@ function detectConnectorAPI(): Promise<DAppConnectorAPI> {
 
 /**
  * Lace v4 API (connect() 方式) でウォレットに接続する。
- * NETWORK_CANDIDATES を順番に試し、ネットワーク不一致の場合のみ次候補にフォールバックする。
+ * ユーザーが選択した networkId のみを指定して接続を試みる(dAppがLaceのネットワークを
+ * 強制的に変えることはできないため、Lace側が同じネットワークでなければ失敗する)。
  * 接続後に getConfiguration() から Indexer / Proof Server の URI を取得する。
  */
 async function connectViaV4(
   connector: LaceV4Connector,
+  networkId: NetworkId,
 ): Promise<WalletConnectionResult> {
-  // ネットワーク候補を順番に試す
+  const fallbackUris = NETWORKS[networkId].fallbackUris;
   let walletAPI: DAppConnectorWalletAPI | null = null;
-  let uris: ServiceUriConfig = FALLBACK_URIS;
-  let lastErr: unknown;
+  let uris: ServiceUriConfig = fallbackUris;
 
-  for (const networkId of NETWORK_CANDIDATES) {
-    try {
-      // 接続を試みる。ネットワーク不一致エラーが出たら次の候補にフォールバックする。
-      walletAPI = await connector.connect(networkId);
-      // Lace v4: getConfiguration() is on walletAPI (not connector)
-      const walletRaw = walletAPI as unknown as Record<string, unknown>;
+  try {
+    walletAPI = await connector.connect(networkId);
+    // Lace v4: getConfiguration() is on walletAPI (not connector)
+    const walletRaw = walletAPI as unknown as Record<string, unknown>;
 
-      if (typeof walletRaw.getConfiguration === "function") {
-        const cfg = (await (
-          walletRaw.getConfiguration as () => Promise<Record<string, string>>
-        )()) as Record<string, string>;
-        uris = {
-          indexerUri:
-            cfg.indexerUri ?? cfg.indexerUrl ?? FALLBACK_URIS.indexerUri,
-          indexerWsUri:
-            cfg.indexerWsUri ?? cfg.indexerWsUrl ?? FALLBACK_URIS.indexerWsUri,
-          proverServerUri:
-            cfg.proverServerUri ??
-            cfg.proofServerUri ??
-            FALLBACK_URIS.proverServerUri,
-          substrateNodeUri: cfg.substrateNodeUri ?? cfg.nodeUri ?? "",
-        };
-      }
-      break;
-    } catch (e: unknown) {
-      lastErr = e;
-      const reason = String(
-        (e as Record<string, unknown>)?.reason ??
-          (e as Record<string, unknown>)?.message ??
-          e,
-      );
-      // only retry for network mismatch errors
-      if (
-        !reason.toLowerCase().includes("mismatch") &&
-        !reason.toLowerCase().includes("unsupported")
-      ) {
-        break;
-      }
+    if (typeof walletRaw.getConfiguration === "function") {
+      const cfg = (await (
+        walletRaw.getConfiguration as () => Promise<Record<string, string>>
+      )()) as Record<string, string>;
+      uris = {
+        indexerUri: cfg.indexerUri ?? cfg.indexerUrl ?? fallbackUris.indexerUri,
+        indexerWsUri:
+          cfg.indexerWsUri ?? cfg.indexerWsUrl ?? fallbackUris.indexerWsUri,
+        proverServerUri:
+          cfg.proverServerUri ??
+          cfg.proofServerUri ??
+          fallbackUris.proverServerUri,
+        substrateNodeUri:
+          cfg.substrateNodeUri ?? cfg.nodeUri ?? fallbackUris.substrateNodeUri,
+      };
     }
-  }
-
-  if (!walletAPI) {
-    const msg = String(
-      (lastErr as Record<string, unknown>)?.message ?? lastErr ?? "",
-    );
+  } catch (e: unknown) {
+    const msg = String((e as Record<string, unknown>)?.message ?? e);
     if (
       msg.toLowerCase().includes("rejected") ||
       msg.toLowerCase().includes("cancel")
     ) {
       throw new UserRejectedError();
     }
-    throw new NetworkMismatchError();
+    throw new NetworkMismatchError(NETWORKS[networkId].label);
   }
 
   // Lace v4: state() does not exist — use getShieldedAddresses() instead
@@ -198,13 +176,17 @@ async function connectViaV4(
  * 3. connect() があれば Lace v4 方式で接続
  * 4. enable() があれば Legacy 方式で接続
  *
+ * @param networkId 接続を要求するネットワーク(preprod/preview)。Lace側が別ネットワークに
+ *                  設定されている場合は NetworkMismatchError になる。
  * @throws WalletNotFoundError   - ウォレット拡張機能が未インストール
  * @throws VersionMismatchError  - API バージョンが非互換
- * @throws NetworkMismatchError  - 全ネットワーク候補で接続失敗
+ * @throws NetworkMismatchError  - Lace が指定ネットワークに接続できなかった
  * @throws UserRejectedError     - ユーザーが接続を拒否
  * @throws WalletTimeoutError    - 接続タイムアウト
  */
-export async function connectToWallet(): Promise<WalletConnectionResult> {
+export async function connectToWallet(
+  networkId: NetworkId,
+): Promise<WalletConnectionResult> {
   // 1. window.midnight.mnLace を検出（ポーリング）
   const connectorAPI = await detectConnectorAPI();
 
@@ -218,7 +200,7 @@ export async function connectToWallet(): Promise<WalletConnectionResult> {
 
   // Lace v4: connect() directly on the connector (no enable() step)
   if (typeof raw.connect === "function") {
-    return connectViaV4(connectorAPI as unknown as LaceV4Connector);
+    return connectViaV4(connectorAPI as unknown as LaceV4Connector, networkId);
   }
 
   // Legacy: enable() first, then optional connect()
@@ -233,11 +215,16 @@ export async function connectToWallet(): Promise<WalletConnectionResult> {
 
     // Some legacy versions expose connect() on the enabled API
     if (typeof enabledRaw.connect === "function") {
-      return connectViaV4(enabledAPI as unknown as LaceV4Connector);
+      return connectViaV4(enabledAPI as unknown as LaceV4Connector, networkId);
     }
 
+    // Legacy API has no network selection — assume it matches the requested network
     const state = await enabledAPI.state();
-    return { wallet: enabledAPI, uris: FALLBACK_URIS, state };
+    return {
+      wallet: enabledAPI,
+      uris: NETWORKS[networkId].fallbackUris,
+      state,
+    };
   } catch (e: unknown) {
     const msg = String((e as Record<string, unknown>)?.message ?? e);
     if (

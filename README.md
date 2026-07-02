@@ -139,6 +139,22 @@ bun cli preprod
 bun cli preprod-ps
 ```
 
+### Deploy Contract to Preview Network
+
+Preview is a lighter-weight public testnet than Preprod (fewer historical events, so wallet sync is faster). If you don't have testnet NIGHT Token, you can get some token from below site.
+
+https://faucet.preview.midnight.network/
+
+```bash
+bun cli preview
+```
+
+> From the second time onward, please run the following command:
+
+```bash
+bun cli preview-ps
+```
+
 Deployed Contract Address info
 
 ```bash

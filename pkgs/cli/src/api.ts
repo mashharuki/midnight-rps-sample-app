@@ -303,48 +303,6 @@ const persistWalletState = async (
   }
 };
 
-// ─── Fast-Start Helper ────────────────────────────────────────────────────────
-
-/**
- * Open a short-lived GraphQL-over-WebSocket connection to the indexer,
- * read the first maxId from the zswapLedgerEvents subscription, then close.
- * Used to create a "wallet birthday" snapshot that skips scanning historical events.
- */
-const getCurrentMaxEventId = (indexerWsUrl: string): Promise<bigint> =>
-  new Promise((resolve, reject) => {
-    const ws = new WebSocket(indexerWsUrl, "graphql-transport-ws");
-    const timer = setTimeout(() => {
-      ws.close();
-      reject(new Error("timeout getting current max event ID"));
-    }, 15_000);
-    ws.on("open", () => {
-      ws.send(JSON.stringify({ type: "connection_init" }));
-    });
-    ws.on("message", (raw) => {
-      const msg = JSON.parse(String(raw));
-      if (msg?.type === "connection_ack") {
-        ws.send(
-          JSON.stringify({
-            id: "maxid",
-            type: "subscribe",
-            payload: {
-              query: "subscription { zswapLedgerEvents(id: 0) { maxId } }",
-            },
-          }),
-        );
-      }
-      if (msg?.type === "next" && msg?.payload?.data?.zswapLedgerEvents?.maxId != null) {
-        clearTimeout(timer);
-        ws.close();
-        resolve(BigInt(msg.payload.data.zswapLedgerEvents.maxId));
-      }
-    });
-    ws.on("error", () => {
-      clearTimeout(timer);
-      reject(new Error("WebSocket error getting max event ID"));
-    });
-  });
-
 // ─── Key Derivation ───────────────────────────────────────────────────────────
 
 /**
@@ -374,6 +332,21 @@ const deriveKeysFromSeed = (seed: string) => {
  * Formats a token balance for display (e.g. 1000000000 -> "1,000,000,000").
  */
 const formatBalance = (balance: bigint): string => balance.toLocaleString();
+
+/**
+ * Faucet URL for the given network, or undefined for networks without one
+ * (e.g. standalone).
+ */
+const faucetUrl = (networkId: string): string | undefined => {
+  switch (networkId) {
+    case "preprod":
+      return "https://faucet.preprod.midnight.network/";
+    case "preview":
+      return "https://faucet.preview.midnight.network/";
+    default:
+      return undefined;
+  }
+};
 
 /**
  * Runs an async operation with an animated spinner on the console.
@@ -550,45 +523,6 @@ export const buildWalletAndWaitForFunds = async (
         ...buildDustConfig(config),
       };
 
-      // Fast-start: for brand-new wallets (no cache), advance the shielded
-      // wallet's offset to the current max event ID so it skips scanning all
-      // historical zswap events.  Safe only because a new wallet has never
-      // received any coins — no historical event can contain its funds.
-      if (!loadCachedState(cacheDir, "shielded")) {
-        try {
-          const currentMaxId = await getCurrentMaxEventId(config.indexerWS);
-          // Spin up a temp wallet (no sync started) to capture the correct
-          // serialization format: public keys, empty state, protocol version, etc.
-          const tempWallet = await WalletFacade.init({
-            configuration: walletConfig,
-            shielded: (cfg) =>
-              ShieldedWallet(cfg).startWithSecretKeys(shieldedSecretKeys),
-            unshielded: (cfg) =>
-              UnshieldedWallet(cfg).startWithPublicKey(
-                PublicKey.fromKeyStore(unshieldedKeystore),
-              ),
-            dust: (cfg) =>
-              DustWallet(cfg).startWithSecretKey(
-                dustSecretKey,
-                ledger.LedgerParameters.initialParameters().dust,
-              ),
-          });
-          const [rawShielded, rawUnshielded, rawDust] = await Promise.all([
-            tempWallet.shielded.serializeState(),
-            tempWallet.unshielded.serializeState(),
-            tempWallet.dust.serializeState(),
-          ]);
-          // Advance the shielded offset to skip all historical events
-          const snap = JSON.parse(rawShielded);
-          snap.offset = String(currentMaxId);
-          saveCachedState(cacheDir, "shielded", JSON.stringify(snap));
-          saveCachedState(cacheDir, "unshielded", rawUnshielded);
-          saveCachedState(cacheDir, "dust", rawDust);
-        } catch {
-          // Fast-start failed — fall back to full genesis sync
-        }
-      }
-
       // Load cached states so wallets resume from last checkpoint instead of genesis
       const shieldedCache = loadCachedState(cacheDir, "shielded");
       const unshieldedCache = loadCachedState(cacheDir, "unshielded");
@@ -622,16 +556,21 @@ export const buildWalletAndWaitForFunds = async (
 
   // Show unshielded address immediately so user can fund via faucet while syncing
   const DIV = "──────────────────────────────────────────────────────────────";
+  const faucet = faucetUrl(networkId);
   console.log(`
 ${DIV}
   Wallet Overview                            Network: ${networkId}
 ${DIV}
   Unshielded Address (send tNight here):
   ${unshieldedKeystore.getBech32Address()}
-
-  Fund your wallet with tNight from the Preprod faucet:
-  https://faucet.preprod.midnight.network/
-${DIV}
+${
+  faucet
+    ? `
+  Fund your wallet with tNight from the faucet:
+  ${faucet}
+`
+    : ""
+}${DIV}
 `);
 
   // Wait for the wallet to sync with the network

@@ -1,11 +1,3 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { useWallet } from "@/contexts/useWallet";
-import { useBalance } from "@/hooks/useBalance";
-import { cn, copyToClipboard, truncateAddress } from "@/lib/utils";
-import { CURRENCY_UNIT, NETWORK_LABEL } from "@/utils/constants";
-import type { WalletConnectionResult } from "@/utils/types";
 import {
   Check,
   Copy,
@@ -19,6 +11,16 @@ import {
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { useNetwork } from "@/contexts/useNetwork";
+import { useWallet } from "@/contexts/useWallet";
+import { useBalance } from "@/hooks/useBalance";
+import { cn, copyToClipboard, truncateAddress } from "@/lib/utils";
+import { CURRENCY_UNIT } from "@/utils/constants";
+import { NETWORKS } from "@/utils/networks";
+import type { WalletConnectionResult } from "@/utils/types";
 
 /**
  * 接続済みウォレットの詳細情報カード。
@@ -28,6 +30,7 @@ import { toast } from "sonner";
  */
 function ConnectedCard({ connection }: { connection: WalletConnectionResult }) {
   const { disconnect } = useWallet();
+  const { networkId } = useNetwork();
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
   const { address } = connection.state;
@@ -64,7 +67,7 @@ function ConnectedCard({ connection }: { connection: WalletConnectionResult }) {
           {t("label.connected")}
         </Badge>
         <span className="rounded-md bg-secondary px-2 py-1 text-xs text-primary">
-          {NETWORK_LABEL}
+          {NETWORKS[networkId].label}
         </span>
       </CardHeader>
 

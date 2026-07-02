@@ -1,8 +1,9 @@
+import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { NetworkToggle } from "@/components/NetworkToggle";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/contexts/useWallet";
 import { APP_NAME } from "@/utils/constants";
-import { Loader2 } from "lucide-react";
-import { useTranslation } from "react-i18next";
 
 /**
  * ウォレット未接続時に表示されるランディングセクション。
@@ -36,6 +37,8 @@ export function ConnectSection() {
           {t("app.subtitle")}
         </p>
       </div>
+
+      <NetworkToggle />
 
       <Button
         size="lg"

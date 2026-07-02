@@ -1,3 +1,14 @@
+import type { ContractAddress } from "@midnight-ntwrk/compact-runtime";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { Subscription } from "rxjs";
+import { useNetwork } from "@/contexts/useNetwork";
 import { useWallet } from "@/contexts/useWallet";
 import { createRpsProviders } from "@/lib/providers";
 import {
@@ -14,18 +25,10 @@ import type {
   RpsMove,
 } from "@/lib/rps-types";
 import { RpsGameState } from "@/lib/rps-types";
-import type { ContractAddress } from "@midnight-ntwrk/compact-runtime";
-import {
-  startTransition,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import type { Subscription } from "rxjs";
 
-const STORAGE_KEY = "rps-contract-address";
+// preprod/preview で保存済みコントラクトアドレスが混ざらないようネットワーク別に分離する
+const contractAddressStorageKey = (networkId: string) =>
+  `rps-contract-address:${networkId}`;
 
 export type RpsStatus =
   | "idle"
@@ -54,19 +57,20 @@ export interface UseRpsGameResult {
 
 export function useRpsGame(): UseRpsGameResult {
   const { state } = useWallet();
+  const { networkId } = useNetwork();
 
   const connection = state.status === "connected" ? state.connection : null;
   const coinPublicKey =
     state.status === "connected" ? state.connection.state.coinPublicKey : "";
 
-  // Memoize RPS providers: re-created only when the wallet connection changes
+  // Memoize RPS providers: re-created only when the wallet connection or network changes
   const providers = useMemo(
-    () => (connection ? createRpsProviders(connection) : null),
-    [connection],
+    () => (connection ? createRpsProviders(connection, networkId) : null),
+    [connection, networkId],
   );
 
   const [contractAddress, setContractAddressState] = useState<string>(
-    () => localStorage.getItem(STORAGE_KEY) ?? "",
+    () => localStorage.getItem(contractAddressStorageKey(networkId)) ?? "",
   );
   const [ledgerState, setLedgerState] = useState<RpsLedgerState | null>(null);
   const [selectedMove, setSelectedMove] = useState<RpsMove | null>(null);
@@ -79,10 +83,21 @@ export function useRpsGame(): UseRpsGameResult {
   const prevStatusRef = useRef<RpsStatus>("idle");
   const subscriptionRef = useRef<Subscription | null>(null);
 
-  const setContractAddress = useCallback((addr: string) => {
-    setContractAddressState(addr);
-    localStorage.setItem(STORAGE_KEY, addr);
-  }, []);
+  // Reload the stored address whenever the active network changes, so a
+  // Preprod address never leaks into a Preview session (or vice versa).
+  useEffect(() => {
+    setContractAddressState(
+      localStorage.getItem(contractAddressStorageKey(networkId)) ?? "",
+    );
+  }, [networkId]);
+
+  const setContractAddress = useCallback(
+    (addr: string) => {
+      setContractAddressState(addr);
+      localStorage.setItem(contractAddressStorageKey(networkId), addr);
+    },
+    [networkId],
+  );
 
   const join = useCallback(
     async (addr: string) => {

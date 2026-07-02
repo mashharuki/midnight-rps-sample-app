@@ -15,12 +15,14 @@ import type {
   WalletProvider,
 } from "@midnight-ntwrk/midnight-js-types";
 import { fromHex, toHex } from "@midnight-ntwrk/midnight-js-utils";
+import type { NetworkId } from "@/utils/networks";
 import type { WalletConnectionResult } from "@/utils/types";
 import type { RpsCircuits, RpsProviders } from "./rps-types";
 import { RpsPrivateStateId } from "./rps-types";
 
 export function createRpsProviders(
   connection: WalletConnectionResult,
+  networkId: NetworkId,
 ): RpsProviders {
   const { wallet, uris, state } = connection;
   const walletRaw = wallet as unknown as Record<string, unknown>;
@@ -89,7 +91,8 @@ export function createRpsProviders(
     privateStateProvider: levelPrivateStateProvider({
       privateStoragePasswordProvider: () => "midnight-rps-demo-app-2024",
       accountId: state.coinPublicKey,
-      privateStateStoreName: RpsPrivateStateId,
+      // preprod/preview で秘匿状態(手・salt)が混ざらないようネットワーク別に分離する
+      privateStateStoreName: `${RpsPrivateStateId}-${networkId}`,
     }),
     publicDataProvider: indexerPublicDataProvider(
       uris.indexerUri,
