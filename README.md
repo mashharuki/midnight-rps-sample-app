@@ -141,23 +141,7 @@ bun cli preprod
 bun cli preprod-ps
 ```
 
-### Deploy Contract to Preview Network
-
-Preview is a lighter-weight public testnet than Preprod (fewer historical events, so wallet sync is faster). If you don't have testnet NIGHT Token, you can get some token from below site.
-
-https://faucet.preview.midnight.network/
-
-```bash
-bun cli preview
-```
-
-> From the second time onward, please run the following command:
-
-```bash
-bun cli preview-ps
-```
-
-Deployed Contract Address info
+Deployed Contract Address info (PreProd Network)
 
 ```bash
 ╔══════════════════════════════════════════════════════════════╗
@@ -174,6 +158,41 @@ Deployed Contract Address info
   ⠇ Deploying RPS contract[19:24:51.416] INFO (40223): Deployed RPS contract at: 23149945fed06aa010cc3e48e9f5df91625567300fae4e09371bb788d07a6bd8
   ✓ Deploying RPS contract
   Contract deployed at: 23149945fed06aa010cc3e48e9f5df91625567300fae4e09371bb788d07a6bd8
+```
+
+### Deploy Contract to Preview Network
+
+Preview is a lighter-weight public testnet than Preprod (fewer historical events, so wallet sync is faster). If you don't have testnet NIGHT Token, you can get some token from below site.
+
+https://faucet.preview.midnight.network/
+
+```bash
+bun cli preview
+```
+
+> From the second time onward, please run the following command:
+
+```bash
+bun cli preview-ps
+```
+
+Deployed Contract Address info (Preview Network)
+
+```bash
+╔══════════════════════════════════════════════════════════════╗
+║                                                              ║
+║              Midnight RPS Example                            ║
+║              ─────────────────────                           ║
+║              Rock-Paper-Scissors with ZK commit-reveal       ║
+║                                                              ║
+╚══════════════════════════════════════════════════════════════╝
+.
+.
+.
+[09:47:53.729] INFO (82390): Deploying RPS contract...
+  ⠋ Deploying RPS contract[09:48:16.409] INFO (82390): Deployed RPS contract at: 01b48aee99c9b15228a4bab8a1223b6edc0868011ea6b87080ff9cfdafe9411e
+  ✓ Deploying RPS contract
+  Contract deployed at: 01b48aee99c9b15228a4bab8a1223b6edc0868011ea6b87080ff9cfdafe9411e
 ```
 
 ```bash

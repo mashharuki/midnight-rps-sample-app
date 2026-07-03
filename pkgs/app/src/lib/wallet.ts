@@ -53,6 +53,13 @@ export class WalletTimeoutError extends Error {
   }
 }
 
+export class WalletSyncingError extends Error {
+  constructor() {
+    super(i18next.t("error.walletSyncing"));
+    this.name = "WalletSyncingError";
+  }
+}
+
 /**
  * window.midnight.mnLace が注入されるまで 100ms ポーリングで待機する。
  * mnLace が見つからない場合は、apiVersion プロパティを持つ任意のキーを探す（旧命名規則対応）。
@@ -119,12 +126,14 @@ async function connectViaV4(
       };
     }
   } catch (e: unknown) {
-    const msg = String((e as Record<string, unknown>)?.message ?? e);
-    if (
-      msg.toLowerCase().includes("rejected") ||
-      msg.toLowerCase().includes("cancel")
-    ) {
+    const lowerMsg = String(
+      (e as Record<string, unknown>)?.message ?? e,
+    ).toLowerCase();
+    if (lowerMsg.includes("rejected") || lowerMsg.includes("cancel")) {
       throw new UserRejectedError();
+    }
+    if (lowerMsg.includes("sync")) {
+      throw new WalletSyncingError();
     }
     throw new NetworkMismatchError(NETWORKS[networkId].label);
   }
@@ -136,23 +145,38 @@ async function connectViaV4(
   let encryptionPublicKey = "";
 
   if (typeof walletRaw.getShieldedAddresses === "function") {
-    // getShieldedAddresses() may return an array (old versions) or a single object (new versions), so handle both cases
-    const result = await (
-      walletRaw.getShieldedAddresses as () => Promise<Record<string, unknown>>
-    )();
-    // Lace v4 returns a single object (not array):
-    // { shieldedAddress, shieldedCoinPublicKey, shieldedEncryptionPublicKey }
-    const entry = (Array.isArray(result) ? result[0] : result) as
-      | Record<string, unknown>
-      | undefined;
-    if (entry) {
-      address = String(entry.shieldedAddress ?? entry.address ?? "");
-      coinPublicKey = String(
-        entry.shieldedCoinPublicKey ?? entry.coinPublicKey ?? "",
-      );
-      encryptionPublicKey = String(
-        entry.shieldedEncryptionPublicKey ?? entry.encryptionPublicKey ?? "",
-      );
+    try {
+      // getShieldedAddresses() may return an array (old versions) or a single object (new versions), so handle both cases
+      const result = await (
+        walletRaw.getShieldedAddresses as () => Promise<
+          Record<string, unknown>
+        >
+      )();
+      // Lace v4 returns a single object (not array):
+      // { shieldedAddress, shieldedCoinPublicKey, shieldedEncryptionPublicKey }
+      const entry = (Array.isArray(result) ? result[0] : result) as
+        | Record<string, unknown>
+        | undefined;
+      if (entry) {
+        address = String(entry.shieldedAddress ?? entry.address ?? "");
+        coinPublicKey = String(
+          entry.shieldedCoinPublicKey ?? entry.coinPublicKey ?? "",
+        );
+        encryptionPublicKey = String(
+          entry.shieldedEncryptionPublicKey ?? entry.encryptionPublicKey ?? "",
+        );
+      }
+    } catch (e: unknown) {
+      // Previously unguarded: a failure here fell through as an unclassified
+      // error with no logging, so the root cause never reached the console.
+      console.error("[wallet] getShieldedAddresses() failed:", e);
+      const lowerMsg = String(
+        (e as Record<string, unknown>)?.message ?? e,
+      ).toLowerCase();
+      if (lowerMsg.includes("sync")) {
+        throw new WalletSyncingError();
+      }
+      throw e;
     }
   }
 

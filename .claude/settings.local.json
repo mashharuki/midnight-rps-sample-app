@@ -59,7 +59,10 @@
       "Bash(python3 -)",
       "Bash(bunx vitest *)",
       "Bash(bun x *)",
-      "Bash(git stash *)"
+      "Bash(git stash *)",
+      "Bash(DEVCONTAINER_HOST_ID=__TRACKED_VAR__ docker compose -f proof-server.devcontainer.yml down)",
+      "Bash(python3 -c ' *)",
+      "Bash(node -e ' *)"
     ],
     "additionalDirectories": [
       "/workspaces/midnight-rps-sample-app/pkgs/cli/wallet-cache/preprod"

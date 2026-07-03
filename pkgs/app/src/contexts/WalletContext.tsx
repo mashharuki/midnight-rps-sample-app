@@ -9,6 +9,7 @@ import {
   UserRejectedError,
   VersionMismatchError,
   WalletNotFoundError,
+  WalletSyncingError,
   WalletTimeoutError,
 } from "@/lib/wallet";
 import { useNetwork } from "./useNetwork";
@@ -44,6 +45,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       const connection = await connectToWallet(networkId);
       setState({ status: "connected", connection });
     } catch (e: unknown) {
+      // Always log the raw error so unclassified failures are diagnosable
+      // from the console instead of only surfacing a generic toast.
+      console.error("[wallet] connect() failed:", e);
       setState({ status: "error" });
       if (e instanceof WalletNotFoundError) {
         toast.error(e.message);
@@ -56,6 +60,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         // ユーザー自身がキャンセルしたので error ではなく disconnected に戻す
         setState({ status: "disconnected" });
       } else if (e instanceof WalletTimeoutError) {
+        toast.error(e.message);
+      } else if (e instanceof WalletSyncingError) {
         toast.error(e.message);
       } else {
         toast.error(i18next.t("error.connectGeneric"));

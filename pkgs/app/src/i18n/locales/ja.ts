@@ -9,6 +9,8 @@ const ja = {
     userRejected: "ウォレット接続がキャンセルされました。",
     walletTimeout:
       "接続タイムアウト。Lace Wallet のロックを解除してから再試行してください。",
+    walletSyncing:
+      "Lace Wallet がネットワークと同期中です。Lace拡張機能を開いて同期が完了するのを待ってから、再度お試しください。",
     unsupportedApi:
       "Unsupported Lace Wallet API: neither connect() nor enable() found.",
     connectGeneric: "接続中にエラーが発生しました。再度お試しください。",

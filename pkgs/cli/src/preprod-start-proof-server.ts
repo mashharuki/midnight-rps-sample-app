@@ -16,7 +16,7 @@
 import { createLogger } from "./logger-utils.js";
 import { run } from "./cli.js";
 import { currentDir, PreprodConfig } from "./config.js";
-import { isProofServerRunning } from "./proof-server-utils.js";
+import { isDevcontainer, isProofServerRunning } from "./proof-server-utils.js";
 import { DockerComposeEnvironment, Wait } from "testcontainers";
 import path from "node:path";
 
@@ -31,13 +31,15 @@ if (await isProofServerRunning(config.proofServer)) {
 } else {
   const dockerEnv = new DockerComposeEnvironment(
     path.resolve(currentDir, ".."),
-    "proof-server.yml",
-  ).withWaitStrategy(
-    "proof-server-1",
-    Wait.forLogMessage(
-      "Actix runtime found; starting in Actix runtime",
-      1,
-    ).withStartupTimeout(300_000),
-  );
+    isDevcontainer() ? "proof-server.devcontainer.yml" : "proof-server.yml",
+  )
+    .withEnvironment({ DEVCONTAINER_HOST_ID: process.env.HOSTNAME ?? "" })
+    .withWaitStrategy(
+      "proof-server-1",
+      Wait.forLogMessage(
+        "Actix runtime found; starting in Actix runtime",
+        1,
+      ).withStartupTimeout(300_000),
+    );
   await run(config, logger, dockerEnv);
 }

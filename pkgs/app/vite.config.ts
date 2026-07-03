@@ -517,21 +517,29 @@ export default defineConfig({
         find: "@midnight-ntwrk/compact-runtime",
         replacement: path.dirname(_crPkgPath),
       },
-      // Node.js stdlib browser polyfills. `vm`/`stream`/`crypto` are excluded:
-      // nothing in this app imports `vm` or `stream` directly (they were only
-      // dead weight dragged in by this blanket alias), and `crypto` is instead
-      // fully pre-bundled by cjsInteropBuildShimPlugin below (see its comment)
-      // since @rollup/plugin-commonjs mishandles several of crypto-browserify's
-      // legacy CJS dependencies (cipher-base, hash-base, randombytes, ...).
-      ...Object.entries(stdLibBrowser)
-        .filter(
-          ([find]) =>
-            !["vm", "stream", "crypto"].includes(find.replace(/^node:/, "")),
-        )
-        .map(([find, replacement]) => ({
-          find,
-          replacement: replacement as string,
-        })),
+      // Node.js stdlib browser polyfills, including `vm`/`stream`/`crypto`.
+      // Nothing in this app's own source imports `vm`/`stream`/`crypto`
+      // directly, but crypto-browserify's legacy CJS dependency tree (hash-base,
+      // cipher-base, ...) does `require("stream").Transform` and
+      // `Transform.call(this)` in its constructors, and `crypto` itself is
+      // needed by @midnight-ntwrk/midnight-js-level-private-state-provider to
+      // encrypt the private-state LevelDB store. Without these three aliased,
+      // the dev server's esbuild-based dep optimizer resolves them to Vite's
+      // default "browser-external" stub (a Proxy that warns and returns
+      // undefined for every property access), which breaks at runtime the
+      // moment createHash/Transform/etc. is actually called (dev only —
+      // nothing else in the app reaches these three polyfills' code paths).
+      // In production, cjsInteropBuildShimPlugin below still intercepts
+      // `crypto` before this alias applies (it runs `enforce: "pre"`), using
+      // its own independent `stream`/`vm` aliasing scoped to that one esbuild
+      // call — so `crypto`'s subtree never reaches Rollup's commonjs plugin
+      // (the thing that actually mishandles it) regardless of what's aliased
+      // here. This `stream`/`vm` alias is therefore inert in production: it's
+      // never resolved because nothing importing them ever reaches Rollup.
+      ...Object.entries(stdLibBrowser).map(([find, replacement]) => ({
+        find,
+        replacement: replacement as string,
+      })),
     ],
   },
   optimizeDeps: {

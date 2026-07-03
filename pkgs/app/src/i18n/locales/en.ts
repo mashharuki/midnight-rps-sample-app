@@ -9,6 +9,8 @@ const en = {
     userRejected: "Wallet connection was cancelled.",
     walletTimeout:
       "Connection timed out. Please unlock Lace Wallet and try again.",
+    walletSyncing:
+      "Lace Wallet is still syncing with the network. Please open the Lace extension, wait for sync to finish, then try again.",
     unsupportedApi:
       "Unsupported Lace Wallet API: neither connect() nor enable() found.",
     connectGeneric: "An error occurred during connection. Please try again.",
