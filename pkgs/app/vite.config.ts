@@ -26,6 +26,33 @@ const onchainRuntimeBrowserPath = path.join(
   "midnight_onchain_runtime_wasm.js",
 );
 
+// `util`/`assert` aren't direct dependencies of this package (only
+// node-stdlib-browser's), and they share their names with Node.js core
+// modules, so they can't be resolved via `_require.resolve` from here — read
+// the paths node-stdlib-browser itself already resolved for its polyfills.
+const utilPkgDir = stdLibBrowser.util as unknown as string;
+const assertPkgDir = stdLibBrowser.assert as unknown as string;
+// @midnight-ntwrk/midnight-js-utils IS a direct dependency, but its package.json
+// "exports" map doesn't expose "./package.json", so resolve its main entry file
+// directly instead of walking up from the package root.
+const midnightJsUtilsCjsEntry = _require.resolve(
+  "@midnight-ntwrk/midnight-js-utils",
+);
+const cryptoPkgDir = stdLibBrowser.crypto as unknown as string;
+// crypto-browserify's own legacy CJS dependency tree (cipher-base, hash-base,
+// randombytes, asn1.js, ...) references bare Node builtin specifiers like
+// `stream`/`vm`/`util` that esbuild's `platform: "browser"` resolver refuses
+// to resolve on its own (it has no knowledge of Vite's `resolve.alias`).
+// Reuse the same polyfill directories node-stdlib-browser already resolved so
+// esbuild can fully inline the whole tree as one clean ESM unit.
+const nodeBuiltinAliasesForEsbuild = Object.fromEntries(
+  Object.entries(stdLibBrowser).filter(([find]) => !find.startsWith("node:")),
+) as Record<string, string>;
+const pathPkgDir = stdLibBrowser.path as unknown as string;
+// semver IS a direct dependency (used in wallet.ts for Lace connector API
+// version checks); resolve the exact copy this package's own imports use.
+const semverEntry = _require.resolve("semver");
+
 // NOTE: reactEsmShimPlugin was removed. Vite's needsInterop mechanism handles
 // React CJS→ESM named export interop natively. All React packages have
 // needsInterop:true which makes Vite generate proxy modules with named exports.
@@ -233,9 +260,227 @@ export default _usse;
   };
 }
 
+interface CjsInteropEntry {
+  /** Bare specifiers this entry should intercept (e.g. "util", "node:util"). */
+  specifiers: string[];
+  /** Absolute directory node-stdlib-browser/node_modules resolved this package to. */
+  pkgDir: string;
+  /** Path to the actual CJS entry file, relative to `pkgDir`. */
+  entryFile: string;
+  /** Import specifiers esbuild should leave unbundled (see esbuild's `external`). */
+  external?: string[];
+  /**
+   * When `external` is set, esbuild can no longer prove there are no
+   * externally-caused side effects, so it stops synthesizing named ES exports
+   * and only emits `export default <cjsModuleExports>` instead. List the
+   * module's known `exports.foo = ...` names here to re-destructure them off
+   * that default export (same trick as this file's React CJS shim).
+   */
+  namedExports?: string[];
+  /**
+   * Import specifiers esbuild should resolve to another path instead of its
+   * normal node_modules lookup (see esbuild's `alias`). Used to hand esbuild
+   * the real polyfill path for bare Node builtin specifiers (e.g. "stream")
+   * that its `platform: "browser"` resolver otherwise refuses to resolve, so
+   * the whole dependency tree can be inlined as one clean ESM unit instead of
+   * leaving more broken CJS files for Rollup to mishandle individually.
+   */
+  alias?: Record<string, string>;
+}
+
+/**
+ * Production-only shim for CJS packages that @rollup/plugin-commonjs only
+ * partially transforms.
+ *
+ * Several unrelated CJS modules reachable from this app (the `util` Node
+ * polyfill pulled in by node-stdlib-browser's `vm`/`stream` aliases, the
+ * `assert` polyfill, and @midnight-ntwrk/midnight-js-utils's CJS build)
+ * exhibit the same failure: some internal helper submodule gets wrapped in an
+ * IIFE correctly, but the entry file's top-level `exports.foo = ...` /
+ * `module.exports = ...` assignments are left as bare, unbound references —
+ * this throws "Uncaught ReferenceError: exports is not defined" in the
+ * browser, since ES modules (unlike Node's CJS loader) have no implicit
+ * `exports`/`module` binding. Bundling each one with esbuild directly
+ * sidesteps the bug: esbuild's CJS→ESM interop handles these module shapes
+ * correctly where Rollup's does not.
+ */
+function cjsInteropBuildShimPlugin(entries: CjsInteropEntry[]): Plugin {
+  const resolved = entries.map((e, i) => ({
+    ...e,
+    virtualId: `\0virtual:cjs-interop-build-${i}`,
+    entryPath: path.join(e.pkgDir, e.entryFile),
+  }));
+  const cache = new Map<string, string>();
+
+  return {
+    name: "cjs-interop-build-shim",
+    apply: "build",
+    enforce: "pre",
+    resolveId(id) {
+      for (const e of resolved) {
+        // node-stdlib-browser's `resolve.alias` entries (and Vite's own
+        // package resolution) are resolved before this hook runs, so by the
+        // time we see it a bare specifier may already be the resolved
+        // absolute package directory (with or without a trailing slash), or
+        // the resolved entry file itself.
+        if (
+          e.specifiers.includes(id) ||
+          id === e.pkgDir ||
+          id === `${e.pkgDir}/` ||
+          id === e.entryPath
+        ) {
+          return e.virtualId;
+        }
+      }
+    },
+    async load(id) {
+      const e = resolved.find((r) => r.virtualId === id);
+      if (!e) return;
+      const cached = cache.get(e.virtualId);
+      if (cached) return cached;
+      const viteRequire = createRequire(_require.resolve("vite/package.json"));
+      const esbuild = await import(viteRequire.resolve("esbuild"));
+      const result = await esbuild.build({
+        entryPoints: [e.entryPath],
+        bundle: true,
+        format: "esm",
+        platform: "browser",
+        write: false,
+        target: "es2020",
+        external: e.external,
+        alias: e.alias,
+      });
+      let code = result.outputFiles[0].text;
+      if (e.namedExports) {
+        // Match the LAST "export default <expr>;" (there can be trailing
+        // license-comment banners after it, so don't anchor to end-of-file).
+        const matches = [...code.matchAll(/export default ([^;]+);/g)];
+        const lastMatch = matches.at(-1);
+        if (!lastMatch) {
+          throw new Error(
+            `[cjs-interop-build-shim] expected an "export default <expr>;" to rewrite for ${e.entryPath}`,
+          );
+        }
+        const before = code.slice(0, lastMatch.index);
+        const after = code.slice(lastMatch.index + lastMatch[0].length);
+        code = `${before}const __shimExports = ${lastMatch[1]};
+export default __shimExports;
+export const { ${e.namedExports.join(", ")} } = __shimExports;
+${after}`;
+      }
+      cache.set(e.virtualId, code);
+      return code;
+    },
+  };
+}
+
 export default defineConfig({
   plugins: [
     reactBuildShimPlugin(),
+    cjsInteropBuildShimPlugin([
+      {
+        specifiers: ["util", "node:util"],
+        pkgDir: utilPkgDir,
+        entryFile: "util.js",
+      },
+      {
+        specifiers: ["assert", "node:assert"],
+        pkgDir: assertPkgDir,
+        entryFile: "build/assert.js",
+      },
+      {
+        specifiers: ["@midnight-ntwrk/midnight-js-utils"],
+        pkgDir: path.dirname(midnightJsUtilsCjsEntry),
+        entryFile: path.basename(midnightJsUtilsCjsEntry),
+        // wallet-sdk-address-format is ESM-only and pulls in @midnight-ntwrk/ledger-v8's
+        // .wasm loading, which esbuild can't bundle standalone here — it already
+        // resolves fine as a normal Rollup import elsewhere in the app, so leave it
+        // external and manually re-export midnight-js-utils' known named members
+        // (see the `namedExports` doc comment on CjsInteropEntry for why).
+        external: ["@midnight-ntwrk/wallet-sdk-address-format"],
+        namedExports: [
+          "assertDefined",
+          "assertIsContractAddress",
+          "assertIsHex",
+          "assertUndefined",
+          "fromHex",
+          "isHex",
+          "parseCoinPublicKeyToHex",
+          "parseEncPublicKeyToHex",
+          "parseHex",
+          "toHex",
+          "ttlOneHour",
+        ],
+      },
+      {
+        specifiers: ["crypto", "node:crypto"],
+        pkgDir: cryptoPkgDir,
+        entryFile: "index.js",
+        // Node's `crypto` (randomBytes/pbkdf2Sync/createCipheriv/createDecipheriv/
+        // createHash) genuinely IS used at runtime, to encrypt the private-state
+        // (move/salt) LevelDB store — see @midnight-ntwrk/midnight-js-level-private-state-provider.
+        // crypto-browserify's legacy dependency tree references bare Node builtins
+        // (stream, vm, util, ...) that esbuild can't resolve standalone; alias
+        // them to the same polyfills node-stdlib-browser resolves elsewhere so
+        // esbuild can inline the whole tree as one clean ESM unit.
+        alias: nodeBuiltinAliasesForEsbuild,
+        namedExports: [
+          "randomBytes",
+          "rng",
+          "pseudoRandomBytes",
+          "prng",
+          "createHash",
+          "Hash",
+          "createHmac",
+          "Hmac",
+          "getHashes",
+          "pbkdf2",
+          "pbkdf2Sync",
+          "Cipher",
+          "createCipher",
+          "Cipheriv",
+          "createCipheriv",
+          "Decipher",
+          "createDecipher",
+          "Decipheriv",
+          "createDecipheriv",
+          "getCiphers",
+          "listCiphers",
+          "DiffieHellmanGroup",
+          "createDiffieHellmanGroup",
+          "getDiffieHellman",
+          "createDiffieHellman",
+          "DiffieHellman",
+          "createSign",
+          "Sign",
+          "createVerify",
+          "Verify",
+          "createECDH",
+          "publicEncrypt",
+          "privateEncrypt",
+          "publicDecrypt",
+          "privateDecrypt",
+          "randomFill",
+          "randomFillSync",
+          "createCredentials",
+          "constants",
+          // Not implemented by crypto-browserify at all; the consumer feature-
+          // detects it (`typeof crypto.timingSafeEqual === 'function'`) and
+          // falls back to a manual comparison, so `undefined` here is correct.
+          "timingSafeEqual",
+        ],
+      },
+      {
+        specifiers: ["path", "node:path"],
+        pkgDir: pathPkgDir,
+        entryFile: "index.js",
+      },
+      {
+        specifiers: ["semver"],
+        pkgDir: path.dirname(semverEntry),
+        entryFile: path.basename(semverEntry),
+      },
+    ]),
     onchainRuntimeV3ShimPlugin(onchainRuntimeBrowserPath),
     react(),
     tailwindcss(),
@@ -272,11 +517,21 @@ export default defineConfig({
         find: "@midnight-ntwrk/compact-runtime",
         replacement: path.dirname(_crPkgPath),
       },
-      // Node.js stdlib browser polyfills
-      ...Object.entries(stdLibBrowser).map(([find, replacement]) => ({
-        find,
-        replacement: replacement as string,
-      })),
+      // Node.js stdlib browser polyfills. `vm`/`stream`/`crypto` are excluded:
+      // nothing in this app imports `vm` or `stream` directly (they were only
+      // dead weight dragged in by this blanket alias), and `crypto` is instead
+      // fully pre-bundled by cjsInteropBuildShimPlugin below (see its comment)
+      // since @rollup/plugin-commonjs mishandles several of crypto-browserify's
+      // legacy CJS dependencies (cipher-base, hash-base, randombytes, ...).
+      ...Object.entries(stdLibBrowser)
+        .filter(
+          ([find]) =>
+            !["vm", "stream", "crypto"].includes(find.replace(/^node:/, "")),
+        )
+        .map(([find, replacement]) => ({
+          find,
+          replacement: replacement as string,
+        })),
     ],
   },
   optimizeDeps: {
@@ -318,15 +573,6 @@ export default defineConfig({
     commonjsOptions: {
       transformMixedEsModules: true,
       include: [/node_modules/],
-      // Without this, @rollup/plugin-commonjs sometimes only partially wraps a
-      // CJS module (e.g. the `util` polyfill pulled in by node-stdlib-browser's
-      // `vm` -> vm-browserify -> util chain): helper sub-modules get wrapped in
-      // an IIFE, but the entry file's top-level `exports.foo = ...` assignments
-      // are left as bare `exports` references with no local binding, which
-      // throws "exports is not defined" at runtime in the browser (ES modules
-      // have no implicit `exports`, unlike Node's CJS loader). strictRequires
-      // forces every CJS module to execute inside a proper function scope like
-      // Node does, so `exports`/`module`/`require` are always locally bound.
       strictRequires: true,
     },
   },

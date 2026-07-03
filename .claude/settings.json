@@ -22,7 +22,22 @@
       "Bash(find /workspaces/midnight-rps-sample-app/node_modules/.bun/node-stdlib-browser@1.3.1/node_modules/node-stdlib-browser -iname *.js)",
       "Bash(node -e ' *)",
       "Bash(grep -n \"node_modules/util\\\\|require\\\\$\\\\$0\\\\|commonjsRequire\\\\|getDefaultExportFromCjs\\\\|__commonJS\\\\|createCommonjsModule\" dist/assets/index-B8CI4eN8.js)",
-      "Bash(grep -o \".\\\\{80\\\\}exports.format=function.\\\\{0,0\\\\}\" dist/assets/index-B8CI4eN8.js)"
+      "Bash(grep -o \".\\\\{80\\\\}exports.format=function.\\\\{0,0\\\\}\" dist/assets/index-B8CI4eN8.js)",
+      "Bash(node /tmp/claude-1000/-workspaces-midnight-rps-sample-app/aa4a860b-6a43-4194-8bad-6dd5d6dad79d/scratchpad/find-exports-leak.mjs /workspaces/midnight-rps-sample-app/pkgs/app/dist/assets/index-BDmw6ftz.js)",
+      "Bash(node /tmp/claude-1000/-workspaces-midnight-rps-sample-app/aa4a860b-6a43-4194-8bad-6dd5d6dad79d/scratchpad/find-exports-leak.mjs /workspaces/midnight-rps-sample-app/pkgs/app/dist/assets/index-DX8ukCaq.js)",
+      "Bash(grep -E \"probe\\\\] resolveId: \\(node:\\)?util$|/util\\(/|$\\)\")",
+      "Bash(node /tmp/claude-1000/-workspaces-midnight-rps-sample-app/aa4a860b-6a43-4194-8bad-6dd5d6dad79d/scratchpad/find-exports-leak.mjs /workspaces/midnight-rps-sample-app/pkgs/app/dist/assets/index-1GNBVANN.js)",
+      "Bash(node /tmp/claude-1000/-workspaces-midnight-rps-sample-app/aa4a860b-6a43-4194-8bad-6dd5d6dad79d/scratchpad/find-exports-leak.mjs /workspaces/midnight-rps-sample-app/pkgs/app/dist/assets/index-nFg3bBAX.js)",
+      "Bash(grep -v \"\\\\.map$\")",
+      "Bash(node --experimental-import-meta-resolve -e ' *)",
+      "Bash(node /tmp/claude-1000/-workspaces-midnight-rps-sample-app/aa4a860b-6a43-4194-8bad-6dd5d6dad79d/scratchpad/find-exports-leak.mjs /workspaces/midnight-rps-sample-app/pkgs/app/dist/assets/index-hbyFIYD0.js)",
+      "Bash(node /tmp/claude-1000/-workspaces-midnight-rps-sample-app/aa4a860b-6a43-4194-8bad-6dd5d6dad79d/scratchpad/find-exports-leak.mjs /workspaces/midnight-rps-sample-app/pkgs/app/dist/assets/index-BToL9Zfk.js)",
+      "Bash(node -e \"console.log\\(require\\('node-stdlib-browser'\\).crypto\\)\")",
+      "Bash(node /tmp/claude-1000/-workspaces-midnight-rps-sample-app/aa4a860b-6a43-4194-8bad-6dd5d6dad79d/scratchpad/find-exports-leak.mjs /workspaces/midnight-rps-sample-app/pkgs/app/dist/assets/index-Ezr_P-xW.js)",
+      "Bash(node /tmp/claude-1000/-workspaces-midnight-rps-sample-app/aa4a860b-6a43-4194-8bad-6dd5d6dad79d/scratchpad/find-exports-leak.mjs /workspaces/midnight-rps-sample-app/pkgs/app/dist/assets/index-CYeQeLgt.js)",
+      "Bash(node /tmp/claude-1000/-workspaces-midnight-rps-sample-app/aa4a860b-6a43-4194-8bad-6dd5d6dad79d/scratchpad/probe.mjs /workspaces/midnight-rps-sample-app/pkgs/app/dist/assets/index-CYeQeLgt.js)",
+      "Bash(./node_modules/.bin/biome format *)",
+      "Bash(git worktree *)"
     ],
     "deny": [
       "Bash(curl:*)",
