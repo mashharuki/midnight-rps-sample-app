@@ -14,6 +14,7 @@ import { createRpsProviders } from "@/lib/providers";
 import {
   clearPrivateState,
   commitMove,
+  getMyPublicKeyHex,
   joinRpsContract,
   revealMove,
   setMyMove,
@@ -47,6 +48,7 @@ export interface UseRpsGameResult {
   status: RpsStatus;
   error: string | null;
   coinPublicKey: string;
+  myPublicKey: string;
   setContractAddress: (addr: string) => void;
   join: (addr: string) => Promise<void>;
   selectMove: (move: RpsMove) => void;
@@ -78,6 +80,24 @@ export function useRpsGame(): UseRpsGameResult {
     useState<DeployedRpsContract | null>(null);
   const [status, setStatus] = useState<RpsStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [myPublicKey, setMyPublicKey] = useState<string>("");
+
+  // p1_key/p2_key on the ledger are derived from the private-state secretKey (see
+  // getMyPublicKeyHex), not the wallet's coinPublicKey — recompute whenever the
+  // providers (and thus the private-state store) change.
+  useEffect(() => {
+    if (!providers) {
+      setMyPublicKey("");
+      return;
+    }
+    let cancelled = false;
+    void getMyPublicKeyHex(providers).then((key) => {
+      if (!cancelled) setMyPublicKey(key);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [providers]);
 
   // Persists the status before an error so the user can retry from the same point
   const prevStatusRef = useRef<RpsStatus>("idle");
@@ -260,6 +280,7 @@ export function useRpsGame(): UseRpsGameResult {
     status,
     error,
     coinPublicKey,
+    myPublicKey,
     setContractAddress,
     join,
     selectMove,

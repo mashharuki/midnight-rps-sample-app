@@ -125,6 +125,25 @@ The `bun run build` command runs the full pipeline in order:
 docker compose -f pkgs/cli/proof-server.yml up
 ```
 
+> **Using the provided Devcontainer?** The Devcontainer bind-mounts the host's
+> `/var/run/docker.sock` (docker-outside-of-docker) rather than nesting
+> docker-in-docker, so the container started by the command above lands on its
+> own isolated Docker network and is **not** reachable from inside the
+> Devcontainer at `127.0.0.1:6300` — `cli`/`app` will fail with
+> `ECONNREFUSED 127.0.0.1:6300` / "Failed to prove transaction". Use the
+> Devcontainer-specific compose file instead, which shares the proof server's
+> network namespace with the Devcontainer itself:
+>
+> ```bash
+> cd pkgs/cli
+> DEVCONTAINER_HOST_ID=$HOSTNAME docker compose -f proof-server.devcontainer.yml up -d
+> ```
+>
+> `bun cli preprod-ps` / `bun cli preview-ps` already do this automatically
+> (they detect `REMOTE_CONTAINERS=true` and pick the right compose file), so
+> prefer those over `bun cli preprod`/`preview` + a manually started proof
+> server inside the Devcontainer.
+
 ### Deploy Contract to PreProd Network
 
 If you don't have testnet NIGHT Token, you can get some token from below site.
@@ -194,6 +213,8 @@ Deployed Contract Address info (Preview Network)
   ✓ Deploying RPS contract
   Contract deployed at: 01b48aee99c9b15228a4bab8a1223b6edc0868011ea6b87080ff9cfdafe9411e
 ```
+
+### 
 
 ```bash
 ──────────────────────────────────────────────────────────────
@@ -271,36 +292,23 @@ Deployed Contract Address info (Preview Network)
 ──────────────────────────────────────────────────────────────
 ```
 
-### Start server
+### Start Frontend App
 
 ```bash
 bun app dev
 ```
 
-### Deploy `pkgs/app` to Vercel
+> If you use devcontainer, you must execute below command
 
-Only `pkgs/app` (the browser dApp) is deployed to Vercel; `pkgs/cli` is a headless Node.js tool and is never deployed. The repo root includes a [`vercel.json`](vercel.json) so a fresh clone builds correctly as a Bun workspace:
-
-```json
-{
-  "installCommand": "bun install",
-  "buildCommand": "bun run build:app",
-  "outputDirectory": "pkgs/app/dist"
-}
+```bash
+bun app dev --host
 ```
 
-Steps:
-1. Import the GitHub repo in the Vercel dashboard (or run `vercel` from the repo root with the Vercel CLI).
-2. Leave **Root Directory** at the repo root (default) — do **not** set it to `pkgs/app`, since the build needs to compile `pkgs/contract` and `pkgs/shared` first and copy their output into `pkgs/app` before `vite build` runs.
-3. `bun run build:app` (see `package.json`) runs: `pkgs/contract` build → `sync-keys-rps` (copies ZK keys/circuits into `pkgs/app/public/managed/rps`) → `pkgs/shared` build → `pkgs/app` build. It skips `pkgs/cli` on purpose — Vercel only needs the app.
-4. The compiled Compact contract (`pkgs/contract/src/managed/rps/**`) is committed to git, so Vercel's build does **not** need the `compact` CLI toolchain — plain `tsc` + `vite build` is enough.
-
-**Proof server caveat**: in production, `pkgs/app` sends proof requests to the same-origin path `/proof-server` (see `pkgs/app/src/lib/providers.ts`) — this exists to work around Lace's service worker blocking direct `fetch()` calls to a different origin. Locally, Vite's dev server proxies that path to `http://127.0.0.1:6300` (see `server.proxy` in `pkgs/app/vite.config.ts`); on Vercel there is no such proxy yet, so wallet connection and UI browsing work, but `commit`/`reveal` (which need a ZK prover) will fail until you have a **publicly reachable, HTTPS proof server**. Once you do, add a rewrite to `vercel.json`:
-
-```json
-{
-  "rewrites": [
-    { "source": "/proof-server/:path*", "destination": "https://<your-public-proof-server-host>/:path*" }
-  ]
-}
-```
+- 1. Install the Lace Wallet extension in two different browsers in advance. Brave is recommended, for example. Then create a wallet in each browser.
+- 2. Obtain test tNight from the faucet and send it to each wallet.
+- 3. Start the application with the `bun app dev` command, then access `localhost:5173` from each browser.
+- 4. Connect the wallets.
+- 5. Enter the address of the contract that was deployed via the CLI.
+- 6. Choose your move in each browser and submit it.
+- 7. Click the Reveal button in each browser.
+- 8. The result will be displayed in each browser.

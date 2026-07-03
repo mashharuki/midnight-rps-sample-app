@@ -101,6 +101,9 @@ export class Contract {
     }
     this.witnesses = witnesses_0;
     this.circuits = {
+      derive_pk(context, ...args_1) {
+        return { result: pureCircuits.derive_pk(...args_1), context };
+      },
       commit: (...args_1) => {
         if (args_1.length !== 1) {
           throw new __compactRuntime.CompactError(`commit: expected 1 argument (as invoked from Typescript), received ${args_1.length}`);
@@ -1042,7 +1045,22 @@ const _dummyContract = new Contract({
   get_my_salt: (...args) => undefined,
   store_move_and_salt: (...args) => undefined
 });
-export const pureCircuits = {};
+export const pureCircuits = {
+  derive_pk: (...args_0) => {
+    if (args_0.length !== 1) {
+      throw new __compactRuntime.CompactError(`derive_pk: expected 1 argument (as invoked from Typescript), received ${args_0.length}`);
+    }
+    const sk_0 = args_0[0];
+    if (!(sk_0.buffer instanceof ArrayBuffer && sk_0.BYTES_PER_ELEMENT === 1 && sk_0.length === 32)) {
+      __compactRuntime.typeError('derive_pk',
+                                 'argument 1',
+                                 'rps.compact line 28 char 1',
+                                 'Bytes<32>',
+                                 sk_0)
+    }
+    return _dummyContract._derive_pk_0(sk_0);
+  }
+};
 export const contractReferenceLocations =
   { tag: 'publicLedgerArray', indices: { } };
 //# sourceMappingURL=index.js.map

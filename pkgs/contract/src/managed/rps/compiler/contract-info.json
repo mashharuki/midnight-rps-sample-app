@@ -4,6 +4,24 @@
   "runtime-version": "0.15.0",
   "circuits": [
     {
+      "name": "derive_pk",
+      "pure": true,
+      "proof": false,
+      "arguments": [
+        {
+          "name": "sk",
+          "type": {
+            "type-name": "Bytes",
+            "length": 32
+          }
+        }
+      ],
+      "result-type": {
+        "type-name": "Bytes",
+        "length": 32
+      }
+    },
+    {
       "name": "commit",
       "pure": false,
       "proof": true,

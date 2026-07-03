@@ -1,13 +1,8 @@
+import { toHex } from "@midnight-ntwrk/midnight-js-utils";
 import { Minus, RotateCcw, Trophy, XCircle } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import type { RpsLedgerState } from "@/lib/rps-types";
 import { RPS_MOVE_KEYS, RpsGameResult, RpsMove } from "@/lib/rps-types";
-
-function uint8ToHex(arr: Uint8Array): string {
-  return Array.from(arr)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
 
 function getMoveEmoji(move: RpsMove): string {
   if (move === RpsMove.rock) return "🪨";
@@ -23,18 +18,18 @@ function getMoveColor(move: RpsMove): string {
 
 interface ResultDisplayProps {
   ledgerState: RpsLedgerState;
-  coinPublicKey: string;
+  myPublicKey: string;
   onPlayAgain?: () => void;
 }
 
 export function ResultDisplay({
   ledgerState,
-  coinPublicKey,
+  myPublicKey,
   onPlayAgain,
 }: ResultDisplayProps) {
   const { t } = useTranslation();
 
-  const isPlayer1 = uint8ToHex(ledgerState.p1_key) === coinPublicKey;
+  const isPlayer1 = toHex(ledgerState.p1_key) === myPublicKey;
   const isDraw = ledgerState.result === RpsGameResult.draw;
   const didWin =
     (ledgerState.result === RpsGameResult.player1_wins && isPlayer1) ||

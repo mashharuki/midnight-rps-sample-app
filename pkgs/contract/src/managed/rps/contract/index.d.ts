@@ -30,9 +30,11 @@ export type ProvableCircuits<PS> = {
 }
 
 export type PureCircuits = {
+  derive_pk(sk_0: Uint8Array): Uint8Array;
 }
 
 export type Circuits<PS> = {
+  derive_pk(context: __compactRuntime.CircuitContext<PS>, sk_0: Uint8Array): __compactRuntime.CircuitResults<PS, Uint8Array>;
   commit(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
   reveal(context: __compactRuntime.CircuitContext<PS>): __compactRuntime.CircuitResults<PS, []>;
 }

@@ -4,7 +4,10 @@ import {
   deployContract,
   findDeployedContract,
 } from "@midnight-ntwrk/midnight-js-contracts";
-import { assertIsContractAddress } from "@midnight-ntwrk/midnight-js-utils";
+import {
+  assertIsContractAddress,
+  toHex,
+} from "@midnight-ntwrk/midnight-js-utils";
 import type { RpsPrivateState } from "contract";
 import { INITIAL_RPS_PRIVATE_STATE, Rps, rpsWitnesses } from "contract";
 import * as Rx from "rxjs";
@@ -79,6 +82,18 @@ export const setMyMove = async (
     myMove: move,
     mySalt: salt,
   });
+};
+
+// p1_key/p2_key on the ledger are `derive_pk(secretKey)`, a ZK-private pseudonym —
+// unrelated to the wallet's coinPublicKey. Recomputing it the same way the contract
+// does is the only way to tell which side ("player1" or "player2") this browser is.
+export const getMyPublicKeyHex = async (
+  providers: RpsProviders,
+): Promise<string> => {
+  const current =
+    (await providers.privateStateProvider.get(RpsPrivateStateId)) ??
+    INITIAL_PRIVATE_STATE;
+  return toHex(Rps.pureCircuits.derive_pk(current.secretKey));
 };
 
 export const clearPrivateState = async (

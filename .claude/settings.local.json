@@ -62,7 +62,13 @@
       "Bash(git stash *)",
       "Bash(DEVCONTAINER_HOST_ID=__TRACKED_VAR__ docker compose -f proof-server.devcontainer.yml down)",
       "Bash(python3 -c ' *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(find /workspaces/midnight-rps-sample-app/node_modules/.bun/@midnight-ntwrk+compact-runtime@0.15.0/node_modules/@midnight-ntwrk/compact-runtime -iname *.d.ts)",
+      "Bash(bun contract *)",
+      "Bash(echo \"exit code: $?\")",
+      "Bash(kill 94382)",
+      "Bash(nohup bun app dev)",
+      "Bash(node -e \"fetch\\('http://127.0.0.1:6300',{signal:AbortSignal.timeout\\(3000\\)}\\).then\\(r=>console.log\\('proof server OK',r.status\\)\\).catch\\(e=>console.log\\('proof server ERR',e.message\\)\\)\")"
     ],
     "additionalDirectories": [
       "/workspaces/midnight-rps-sample-app/pkgs/cli/wallet-cache/preprod"

@@ -1,35 +1,27 @@
 import type { RpsLedgerState } from "@/lib/rps-types";
 import { RpsGameState } from "@/lib/rps-types";
+import { toHex } from "@midnight-ntwrk/midnight-js-utils";
 import { CheckCircle2 } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { SealedMove } from "./SealedMove";
 import { OpponentStatus } from "./OpponentStatus";
 
-function uint8ToHex(arr: Uint8Array): string {
-  return Array.from(arr)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 interface WaitingStateProps {
   ledgerState: RpsLedgerState;
-  coinPublicKey: string;
+  myPublicKey: string;
 }
 
-export function WaitingState({
-  ledgerState,
-  coinPublicKey,
-}: WaitingStateProps) {
+export function WaitingState({ ledgerState, myPublicKey }: WaitingStateProps) {
   const { t } = useTranslation();
 
-  const isPlayer1 = uint8ToHex(ledgerState.p1_key) === coinPublicKey;
+  const isPlayer1 = toHex(ledgerState.p1_key) === myPublicKey;
   const myRevealed = isPlayer1
     ? ledgerState.p1_revealed
     : ledgerState.p2_revealed;
   const opponentCommitted = isPlayer1
     ? ledgerState.p2_joined
     : ledgerState.p1_joined;
-  const myCommitHash = uint8ToHex(
+  const myCommitHash = toHex(
     isPlayer1 ? ledgerState.p1_commit : ledgerState.p2_commit,
   );
 

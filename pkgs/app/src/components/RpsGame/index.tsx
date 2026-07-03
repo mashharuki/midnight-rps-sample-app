@@ -34,7 +34,7 @@ export function RpsGame() {
     selectedMove,
     status,
     error,
-    coinPublicKey,
+    myPublicKey,
     setContractAddress,
     join,
     selectMove,
@@ -172,10 +172,7 @@ export function RpsGame() {
 
         {/* ── Phase 3: Waiting / Reveal ── */}
         {inWaitingPhase && ledgerState !== null && (
-          <WaitingState
-            ledgerState={ledgerState}
-            coinPublicKey={coinPublicKey}
-          />
+          <WaitingState ledgerState={ledgerState} myPublicKey={myPublicKey} />
         )}
 
         {showRevealButton && (
@@ -190,7 +187,7 @@ export function RpsGame() {
         {showResult && ledgerState !== null && (
           <ResultDisplay
             ledgerState={ledgerState}
-            coinPublicKey={coinPublicKey}
+            myPublicKey={myPublicKey}
             onPlayAgain={reset}
           />
         )}

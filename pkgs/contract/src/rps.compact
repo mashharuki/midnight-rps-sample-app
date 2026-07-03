@@ -25,7 +25,7 @@ witness get_my_move():                            Move;
 witness get_my_salt():                            Bytes<32>;
 witness store_move_and_salt(m: Move, s: Bytes<32>): [];
 
-pure circuit derive_pk(sk: Bytes<32>): Bytes<32> {
+export pure circuit derive_pk(sk: Bytes<32>): Bytes<32> {
   return persistentHash<Vector<2, Bytes<32>>>([pad(32, "rps:pk:v1"), sk]);
 }
 
