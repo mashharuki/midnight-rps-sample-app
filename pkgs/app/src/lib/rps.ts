@@ -96,6 +96,16 @@ export const getMyPublicKeyHex = async (
   return toHex(Rps.pureCircuits.derive_pk(current.secretKey));
 };
 
+// TEMP DEBUG: dump the raw stored private state to diagnose why myMove/mySalt
+// disappear between commit() and reveal() even without a reload/reset.
+export const debugPrivateState = async (
+  providers: RpsProviders,
+  label: string,
+): Promise<void> => {
+  const current = await providers.privateStateProvider.get(RpsPrivateStateId);
+  console.log(`[debug:${label}] privateState =`, current);
+};
+
 export const clearPrivateState = async (
   providers: RpsProviders,
 ): Promise<void> => {

@@ -14,6 +14,7 @@ import { createRpsProviders } from "@/lib/providers";
 import {
   clearPrivateState,
   commitMove,
+  debugPrivateState,
   getMyPublicKeyHex,
   joinRpsContract,
   revealMove,
@@ -30,6 +31,27 @@ import { RpsGameState } from "@/lib/rps-types";
 // preprod/preview で保存済みコントラクトアドレスが混ざらないようネットワーク別に分離する
 const contractAddressStorageKey = (networkId: string) =>
   `rps-contract-address:${networkId}`;
+
+// Effect-TS errors (e.g. ContractRuntimeError from compact-js) wrap the real
+// assertion failure in `.cause`, which plain String(e) drops. Walk the chain
+// so circuit assertion messages (e.g. "Commitment mismatch for P2") reach the
+// error banner instead of just the generic "Error executing circuit 'reveal'".
+const formatError = (e: unknown): string => {
+  const parts: string[] = [];
+  let current: unknown = e;
+  const seen = new Set<unknown>();
+  while (current != null && !seen.has(current)) {
+    seen.add(current);
+    if (current instanceof Error) {
+      parts.push(current.message);
+      current = (current as { cause?: unknown }).cause;
+    } else {
+      parts.push(String(current));
+      break;
+    }
+  }
+  return parts.join(" -> ");
+};
 
 export type RpsStatus =
   | "idle"
@@ -82,26 +104,6 @@ export function useRpsGame(): UseRpsGameResult {
   const [error, setError] = useState<string | null>(null);
   const [myPublicKey, setMyPublicKey] = useState<string>("");
 
-  // p1_key/p2_key on the ledger are derived from the private-state secretKey (see
-  // getMyPublicKeyHex), not the wallet's coinPublicKey. The private-state provider only
-  // knows which contract's store to read once findDeployedContract() (called from join())
-  // has run providers.privateStateProvider.setContractAddress() internally — reading it
-  // any earlier throws "Contract address not set". So this must depend on deployedContract,
-  // not just providers, and must recompute after every successful join (not just once).
-  useEffect(() => {
-    if (!providers || !deployedContract) {
-      setMyPublicKey("");
-      return;
-    }
-    let cancelled = false;
-    void getMyPublicKeyHex(providers).then((key) => {
-      if (!cancelled) setMyPublicKey(key);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [providers, deployedContract]);
-
   // Persists the status before an error so the user can retry from the same point
   const prevStatusRef = useRef<RpsStatus>("idle");
   const subscriptionRef = useRef<Subscription | null>(null);
@@ -134,6 +136,16 @@ export function useRpsGame(): UseRpsGameResult {
         setDeployedContract(contract);
         setContractAddress(addr);
 
+        // p1_key/p2_key on the ledger are derived from the private-state secretKey
+        // (see getMyPublicKeyHex), not the wallet's coinPublicKey. The private-state
+        // provider only knows which contract's store to read once
+        // joinRpsContract()/findDeployedContract() (just above) has run
+        // providers.privateStateProvider.setContractAddress() internally — so this
+        // must run right here, against this same `providers` reference, rather than
+        // in a separate effect that could fire against a since-recreated `providers`
+        // instance that never had setContractAddress() called on it.
+        setMyPublicKey(await getMyPublicKeyHex(providers));
+
         // Start ledger subscription; auto-transition status when game state advances.
         // This reconciles the app status with the actual on-chain state, which is
         // critical after a page refresh or after a wallet error that obscured a
@@ -157,14 +169,18 @@ export function useRpsGame(): UseRpsGameResult {
               );
             }
           },
-          error: (e: unknown) => setError(String(e)),
+          error: (e: unknown) => {
+            console.error("[rps] subscription error:", e);
+            setError(formatError(e));
+          },
         });
 
         setStatus("joined");
       } catch (e) {
+        console.error("[rps] join failed:", e);
         prevStatusRef.current = "idle";
         setStatus("error");
-        setError(String(e));
+        setError(formatError(e));
       }
     },
     [providers, setContractAddress],
@@ -199,12 +215,15 @@ export function useRpsGame(): UseRpsGameResult {
     try {
       // Update private state with selected move before calling circuit
       await setMyMove(providers, selectedMove);
+      await debugPrivateState(providers, "after setMyMove");
       await commitMove(deployedContract);
+      await debugPrivateState(providers, "after commitMove");
       setStatus("committed");
     } catch (e) {
+      console.error("[rps] commit failed:", e);
       prevStatusRef.current = "joined";
       setStatus("error");
-      setError(String(e));
+      setError(formatError(e));
     }
   }, [providers, deployedContract, selectedMove, status, ledgerState]);
 
@@ -246,15 +265,17 @@ export function useRpsGame(): UseRpsGameResult {
     setError(null);
 
     try {
+      if (providers) await debugPrivateState(providers, "before revealMove");
       await revealMove(deployedContract);
       // Status transitions to "finished" automatically via subscription
       // when the ledger confirms both players have revealed
     } catch (e) {
+      console.error("[rps] reveal failed:", e);
       prevStatusRef.current = "committed";
       setStatus("error");
-      setError(String(e));
+      setError(formatError(e));
     }
-  }, [deployedContract, status, ledgerState]);
+  }, [deployedContract, status, ledgerState, providers]);
 
   // Clean up subscription when wallet disconnects or component unmounts
   useEffect(() => {
@@ -266,6 +287,7 @@ export function useRpsGame(): UseRpsGameResult {
         setLedgerState(null);
         setSelectedMove(null);
         setStatus("idle");
+        setMyPublicKey("");
       });
     }
   }, [state.status]);

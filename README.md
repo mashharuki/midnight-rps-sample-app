@@ -327,4 +327,5 @@ bun app dev --host
 - 6. Choose your move in each browser and submit it.
 - 7. Click the Reveal button in each browser.
 - 8. The result will be displayed in each browser.
+  - The reveal order must match the commit order (e.g., if you committed from Wallet A then Wallet B, you must also reveal from Wallet A then Wallet B).
 
