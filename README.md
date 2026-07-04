@@ -2,6 +2,9 @@
 
 Midnight RPS sample dApp
 
+[![サービス紹介動画](https://github.com/user-attachments/assets/e432744b-5752-4232-8e81-d8aab4451b07)](https://youtu.be/jmUyDCOBVCY)
+
+
 ## Overview
 
 midnight-rps-sample-app is a sample Rock-Paper-Scissors dApp project built on Midnight, a privacy-focused blockchain.
