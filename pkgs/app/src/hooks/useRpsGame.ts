@@ -83,10 +83,13 @@ export function useRpsGame(): UseRpsGameResult {
   const [myPublicKey, setMyPublicKey] = useState<string>("");
 
   // p1_key/p2_key on the ledger are derived from the private-state secretKey (see
-  // getMyPublicKeyHex), not the wallet's coinPublicKey — recompute whenever the
-  // providers (and thus the private-state store) change.
+  // getMyPublicKeyHex), not the wallet's coinPublicKey. The private-state provider only
+  // knows which contract's store to read once findDeployedContract() (called from join())
+  // has run providers.privateStateProvider.setContractAddress() internally — reading it
+  // any earlier throws "Contract address not set". So this must depend on deployedContract,
+  // not just providers, and must recompute after every successful join (not just once).
   useEffect(() => {
-    if (!providers) {
+    if (!providers || !deployedContract) {
       setMyPublicKey("");
       return;
     }
@@ -97,7 +100,7 @@ export function useRpsGame(): UseRpsGameResult {
     return () => {
       cancelled = true;
     };
-  }, [providers]);
+  }, [providers, deployedContract]);
 
   // Persists the status before an error so the user can retry from the same point
   const prevStatusRef = useRef<RpsStatus>("idle");

@@ -68,7 +68,8 @@
       "Bash(echo \"exit code: $?\")",
       "Bash(kill 94382)",
       "Bash(nohup bun app dev)",
-      "Bash(node -e \"fetch\\('http://127.0.0.1:6300',{signal:AbortSignal.timeout\\(3000\\)}\\).then\\(r=>console.log\\('proof server OK',r.status\\)\\).catch\\(e=>console.log\\('proof server ERR',e.message\\)\\)\")"
+      "Bash(node -e \"fetch\\('http://127.0.0.1:6300',{signal:AbortSignal.timeout\\(3000\\)}\\).then\\(r=>console.log\\('proof server OK',r.status\\)\\).catch\\(e=>console.log\\('proof server ERR',e.message\\)\\)\")",
+      "Bash(xargs ls)"
     ],
     "additionalDirectories": [
       "/workspaces/midnight-rps-sample-app/pkgs/cli/wallet-cache/preprod"

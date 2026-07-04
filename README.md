@@ -69,6 +69,22 @@ node 23.3.0
 
 ![](./docs/5.png)
 
+![](./docs/6.png)
+
+![](./docs/7.png)
+
+![](./docs/8.png)
+
+![](./docs/9.png)
+
+![](./docs/10.png)
+
+![](./docs/11.png)
+
+![](./docs/12.png)
+
+![](./docs/13.png)
+
 ## How to work
 
 ### Use Devcontainer (Recommended)
@@ -135,8 +151,7 @@ docker compose -f pkgs/cli/proof-server.yml up
 > network namespace with the Devcontainer itself:
 >
 > ```bash
-> cd pkgs/cli
-> DEVCONTAINER_HOST_ID=$HOSTNAME docker compose -f proof-server.devcontainer.yml up -d
+> DEVCONTAINER_HOST_ID=$HOSTNAME docker compose -f pkgs/cli/proof-server.devcontainer.yml up
 > ```
 >
 > `bun cli preprod-ps` / `bun cli preview-ps` already do this automatically
@@ -209,9 +224,9 @@ Deployed Contract Address info (Preview Network)
 .
 .
 [09:47:53.729] INFO (82390): Deploying RPS contract...
-  ⠋ Deploying RPS contract[09:48:16.409] INFO (82390): Deployed RPS contract at: 01b48aee99c9b15228a4bab8a1223b6edc0868011ea6b87080ff9cfdafe9411e
+  ⠋ Deploying RPS contract[09:48:16.409] INFO (82390): Deployed RPS contract at: 9070775f7615e1598dc8642398453d7d4bb9cd0939c06019849f5ec80ef5ee5c
   ✓ Deploying RPS contract
-  Contract deployed at: 01b48aee99c9b15228a4bab8a1223b6edc0868011ea6b87080ff9cfdafe9411e
+  Contract deployed at: 9070775f7615e1598dc8642398453d7d4bb9cd0939c06019849f5ec80ef5ee5c
 ```
 
 ### 
@@ -312,3 +327,4 @@ bun app dev --host
 - 6. Choose your move in each browser and submit it.
 - 7. Click the Reveal button in each browser.
 - 8. The result will be displayed in each browser.
+

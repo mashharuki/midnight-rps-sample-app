@@ -29,13 +29,17 @@ export function ResultDisplay({
 }: ResultDisplayProps) {
   const { t } = useTranslation();
 
+  // Explicitly checking both keys (rather than falling back to "not p1 = p2")
+  // avoids mislabeling an unregistered viewer (myPublicKey matching neither key)
+  // as player2's perspective.
   const isPlayer1 = toHex(ledgerState.p1_key) === myPublicKey;
+  const isPlayer2 = toHex(ledgerState.p2_key) === myPublicKey;
   const isDraw = ledgerState.result === RpsGameResult.draw;
   const didWin =
     (ledgerState.result === RpsGameResult.player1_wins && isPlayer1) ||
-    (ledgerState.result === RpsGameResult.player2_wins && !isPlayer1);
+    (ledgerState.result === RpsGameResult.player2_wins && isPlayer2);
   const didLose =
-    (ledgerState.result === RpsGameResult.player1_wins && !isPlayer1) ||
+    (ledgerState.result === RpsGameResult.player1_wins && isPlayer2) ||
     (ledgerState.result === RpsGameResult.player2_wins && isPlayer1);
 
   const resultKey = isDraw ? "draw" : didWin ? "win" : "lose";
