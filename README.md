@@ -2,6 +2,8 @@
 
 Midnight RPS sample dApp
 
+## Demo Video - YouTube
+
 [![サービス紹介動画](https://github.com/user-attachments/assets/e432744b-5752-4232-8e81-d8aab4451b07)](https://youtu.be/jmUyDCOBVCY)
 
 
