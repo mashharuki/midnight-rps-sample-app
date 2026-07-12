@@ -13,7 +13,7 @@ description: >
 license: MIT
 metadata:
   author: mashharuki
-  version: "2.0.0"
+  version: "2.1.0"
   midnight-js-version: "2.0.2"
   dapp-connector-api-version: "3.0.0"
   reference: "example-kitties"
@@ -573,3 +573,6 @@ const truncateAddress = (address: string) =>
 - [ ] Proof server の起動確認（`/api/v1/graphql` ヘルスチェック）
 - [ ] ネットワーク設定を環境変数で切り替え可能にする
 - [ ] コントラクトアドレスを LocalStorage / URL パラメータで保持
+- [ ] **複数ネットワークを切替可能にするなら**、`privateStateStoreName` とコントラクトアドレスの LocalStorage キーをネットワークIDでスコープする（分離しないと Preprod/Preview 間で秘匿状態やアドレスが混ざる。[`references/providers.md`](references/providers.md) 参照）
+- [ ] Proof Server への fetch を `window.location.origin` 経由の同一オリジンパスにし、Vite dev サーバーでプロキシする（Lace の Service Worker が `127.0.0.1` への直接 fetch をブロックするため。本番デプロイ時は別途 HTTPS Proof Server へのリライトが必要）
+- [ ] **本番ビルドだけ**を実際にブラウザで開いて検証する（`vite build && vite preview` 相当）。開発サーバーの esbuild 事前バンドルでは検出できない `exports is not defined` のような Rollup CJS 変換バグが本番ビルドにのみ現れることがある（[`references/build-config.md`](references/build-config.md) 参照）

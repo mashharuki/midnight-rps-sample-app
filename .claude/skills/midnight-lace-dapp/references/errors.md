@@ -79,6 +79,10 @@ const USER_MESSAGES: Record<MidnightWalletErrorType, string> = {
 | `indexer` / `ECONNREFUSED` | Indexer 未起動またはURL不正 | Lace のネットワーク設定を確認 |
 | `contract not found` | 指定アドレスにコントラクトが存在しない | アドレスを確認、または再デプロイ |
 | `private state not found` | プライベート状態の初期化漏れ | `initialPrivateState` を正しく渡す |
+| Proof Server への fetch が `net::ERR_FAILED`（`127.0.0.1:6300`宛） | Lace の Service Worker がページの fetch をインターセプトしており、Service Worker コンテキストから `127.0.0.1` への直接 fetch を Chrome がブロックしている | 同一オリジンのパス（例: `/proof-server`）にして Vite dev サーバーでプロキシする。詳細は [`build-config.md`](build-config.md) 罠その2 |
+| `Uncaught ReferenceError: exports is not defined`（**本番ビルドのみ**、開発サーバーでは無症状） | `@rollup/plugin-commonjs` が一部の legacy CJS パッケージ（`util`/`assert`/`crypto`/`semver`/`@midnight-ntwrk/midnight-js-utils` 等）を部分的にしか ESM 変換できない | esbuild で個別にバンドルする shim を挟む。詳細は [`build-config.md`](build-config.md) 「本番ビルド限定で起きる罠」 |
+| 手/コミット/リビールなど circuit の `assert()` メッセージが `formatError` 相当のログに出ず、汎用の "Error executing circuit 'reveal'" しか見えない | compact-js の `ContractRuntimeError` のような Effect-TS 系エラーは、本当の assertion メッセージを `.cause` チェーンの中に包む。`String(e)` や `e.message` だけでは失われる | `.cause` を辿って全メッセージを連結するユーティリティ（`while (current?.cause) ...`）でエラー表示する |
+| Lace 経由の tx 実行がコンソール上はエラーになったのに、再読み込みすると実は on-chain には成功していた（`runtime.lastError` チャンネルが閉じた等） | Lace 拡張機能側のメッセージングの問題で、実際には成功したトランザクションがエラーとして UI に伝播することがある | UI 側のステートをオンチェーンの真実（`publicDataProvider` の Observable 購読）で継続的に再照合する。ローカルの status だけを信頼しない — 例えば「commit 送信でエラー扱いになったが ledger の state はすでに `committed`」ならローカル status を `committed` に前進させ、ユーザーを reveal フェーズに進ませる |
 
 ### デバッグ手順
 

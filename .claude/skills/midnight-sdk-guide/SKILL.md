@@ -11,7 +11,7 @@ description: >
 license: MIT
 metadata:
   author: mashharuki
-  version: "3.0.0"
+  version: "3.1.0"
   midnight-js-version: "4.0.4"
   wallet-sdk-facade-version: "3.0.0"
   compact-runtime-version: "0.15.0"
@@ -155,6 +155,11 @@ const walletConfig = {
   // Shielded (ZSwap)
   networkId: getNetworkId(),
   indexerClientConnection: { indexerHttpUrl: config.indexer, indexerWsUrl: config.indexerWS },
+  // Default batchSize is 10. On Preprod, with ~1.2M historical zswap events to scan from
+  // genesis, that's 1.2M/10 x ~4ms scheduling overhead per batch = ~80 minutes of wallet
+  // sync. Raising this to 1000 cuts the same sync down to roughly 5 seconds — this is not
+  // a marginal tuning knob, it's the difference between a usable CLI and one that looks hung.
+  batchSize: 1000,
   provingServerUrl: new URL(config.proofServer),
   relayURL: new URL(config.node.replace(/^http/, 'ws')),
   // Unshielded
@@ -188,6 +193,33 @@ const syncedState = await Rx.firstValueFrom(
 );
 ```
 
+### Persisting wallet state across runs (checkpoint cache)
+
+A headless CLI re-run pays the full genesis sync cost every time unless you persist and restore each sub-wallet's serialized state. All three sub-wallets (`shielded`, `unshielded`, `dust`) support `serializeState()`/`.restore()`:
+
+```typescript
+// After a successful sync, persist a checkpoint per (networkId, seed) so the next run resumes from it
+const [shielded, unshielded, dust] = await Promise.all([
+  wallet.shielded.serializeState(),
+  wallet.unshielded.serializeState(),
+  wallet.dust.serializeState(),
+]);
+fs.writeFileSync(path.join(cacheDir, 'shielded.json'), shielded);
+// ... same for unshielded.json, dust.json
+
+// On the next run, if all three cache files exist, restore instead of starting fresh:
+const wallet = await WalletFacade.init({
+  configuration: walletConfig,
+  shielded: (cfg) => fromCache ? ShieldedWallet(cfg).restore(shieldedCache) : ShieldedWallet(cfg).startWithSecretKeys(shieldedSecretKeys),
+  unshielded: (cfg) => fromCache ? UnshieldedWallet(cfg).restore(unshieldedCache) : UnshieldedWallet(cfg).startWithPublicKey(PublicKey.fromKeyStore(unshieldedKeystore)),
+  dust: (cfg) => fromCache ? DustWallet(cfg).restore(dustCache) : DustWallet(cfg).startWithSecretKey(dustSecretKey, ledger.LedgerParameters.initialParameters().dust),
+});
+```
+
+Scope the cache directory by both `networkId` and a seed-derived key (e.g. `wallet-cache/<networkId>/<seed.slice(0,16)>/`) so switching networks or wallets never restores the wrong checkpoint.
+
+> **Do NOT try to "optimize" this further by rewriting a cached snapshot's internal offset/birthday to skip past historical events you don't care about.** The zswap commitment tree requires strictly sequential inserts starting from index 0 — patching an offset without the matching tree state corrupts sync with an error like `values inserted non-linearly into zswap commitment tree`. This was tried and reverted in production. A full genesis sync (optionally accelerated by a larger `batchSize`, see above) is the only correct way to build the initial state; only a `serializeState()`/`.restore()` checkpoint from a previously-*completed* sync is safe to reuse.
+
 ---
 
 ## 6. Configure Providers
@@ -215,6 +247,30 @@ export const configureProviders = async (ctx: WalletContext, config: Config) => 
     proofProvider: httpClientProofProvider(config.proofServer, zkConfigProvider),
     walletProvider: walletAndMidnightProvider,
     midnightProvider: walletAndMidnightProvider,
+  };
+};
+```
+
+### Multi-player / multi-account private state isolation
+
+`levelPrivateStateProvider`'s `accountId` parameter namespaces the LevelDB store per account. For a single-wallet-per-process CLI this defaults to the wallet's own coin public key, but for a **local multi-player scenario** (e.g. two players of the same two-party contract running in the same test/demo process against separate wallets), pass an explicit `accountId` per player instead of deriving it from the shared process's own wallet — otherwise both players' private state (their move/salt/secret witnesses) collide in the same LevelDB namespace:
+
+```typescript
+export const configureProvidersFor = async (
+  ctx: WalletContext,
+  config: Config,
+  accountId?: string, // pass a distinct id per player when running multiple local players
+): Promise<MyProviders> => {
+  const walletAndMidnightProvider = await createWalletAndMidnightProvider(ctx);
+  const effectiveAccountId = accountId ?? walletAndMidnightProvider.getCoinPublicKey();
+  const storagePassword = `${Buffer.from(effectiveAccountId, 'hex').toString('base64')}!`;
+  return {
+    privateStateProvider: levelPrivateStateProvider<typeof MyPrivateStateId>({
+      privateStateStoreName: 'my-private-state', // can stay shared; accountId does the isolation
+      accountId: effectiveAccountId,
+      privateStoragePasswordProvider: () => storagePassword,
+    }),
+    // ... other providers as above
   };
 };
 ```
@@ -346,6 +402,40 @@ const finalized = await wallet.finalizeRecipe(recipe);
 await wallet.submitTransaction(finalized);
 ```
 
+### Make dust registration idempotent (safe to call on every run)
+
+If a CLI/script calls `registerNightUtxosForDustGeneration` unconditionally on every startup, re-running it against a wallet that already has dust (or already-registered NIGHT UTXOs) wastes a transaction and can even error. Guard it in three steps:
+
+```typescript
+const state = await Rx.firstValueFrom(wallet.state().pipe(Rx.filter((s) => s.isSynced)));
+
+// 1. Already generating dust? Nothing to do.
+if (state.dust.availableCoins.length > 0) {
+  console.log(`Dust already available (${state.dust.balance(new Date())})`);
+} else {
+  // 2. Only register coins not already flagged — re-registering an already-registered
+  //    UTXO is both wasted and unnecessary.
+  const unregistered = state.unshielded.availableCoins.filter(
+    (coin) => coin.meta?.registeredForDustGeneration !== true,
+  );
+  if (unregistered.length > 0) {
+    const recipe = await wallet.registerNightUtxosForDustGeneration(
+      unregistered, unshieldedKeystore.getPublicKey(),
+      (payload) => unshieldedKeystore.signData(payload),
+    );
+    await wallet.submitTransaction(await wallet.finalizeRecipe(recipe));
+  }
+  // 3. Whether we just registered or all coins were already registered, dust still
+  //    takes real time to accrue — wait on balance > 0, not just on the registration tx.
+  await Rx.firstValueFrom(
+    wallet.state().pipe(
+      Rx.throttleTime(5_000),
+      Rx.filter((s) => s.isSynced && s.dust.balance(new Date()) > 0n),
+    ),
+  );
+}
+```
+
 ---
 
 ## 13. Node.js WebSocket Setup
@@ -380,6 +470,8 @@ import type { ProvableCircuitId } from '@midnight-ntwrk/compact-js';
 | `Cannot find module` test errors | Contract not built | `cd contract && npm run compact && npm run build` |
 | DUST balance 0 after failed deploy | Locked pending coins | Restart the app to release locked DUST |
 | `isSynced` never true | WebSocket not polyfilled | Add `globalThis.WebSocket = WebSocket` (ws package) |
+| `values inserted non-linearly into zswap commitment tree` | A cached wallet snapshot's offset was patched/rewritten to skip historical events, but the zswap commitment tree requires strictly sequential inserts from index 0 | Do not patch snapshot offsets. Discard the corrupted cache and resync from genesis (optionally with a larger `batchSize`, see §5) |
+| Wallet sync on Preprod feels like it's hanging for tens of minutes | Default `batchSize: 10` on the shielded wallet config schedules ~1.2M historical events in tiny batches | Set `batchSize: 1000` in the shielded wallet config (see §5) |
 
 ---
 

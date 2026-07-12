@@ -314,3 +314,42 @@ function useTransaction<T>(fn: () => Promise<T>) {
 // 使用例
 const { status, execute } = useTransaction(() => contractAPI.createItem());
 ```
+
+## オンチェーン状態との再照合パターン（Lace のエラー誤報への対処）
+
+Lace 拡張機能は、実際には成功した on-chain トランザクション（例: `contract.callTx.commit()`）を、拡張機能内部のメッセージングの問題（`runtime.lastError` チャンネルが閉じる等）でエラーとして UI 側に伝播させることがある。ローカルの楽観的 status（`idle → committing → committed`）だけを信頼すると、ユーザーは実際には成功しているのに「エラー」画面から抜け出せなくなる。
+
+**対処**: ローカル status を「ヒント」として扱い、`publicDataProvider` の Observable 購読から得られる**実際の ledger 状態を正**として、両者が食い違ったら ledger 側に合わせて自動修復する。
+
+```typescript
+const [status, setStatus] = useState<'idle' | 'committing' | 'committed' | 'error'>('idle');
+const prevStatusRef = useRef(status); // エラー直前の status を退避（復帰時のフォールバック用）
+
+// 1. 購読側: ledger の状態が進んでいたら、ローカル status がまだ古い場合のみ前進させる
+useEffect(() => {
+  const sub = state$.subscribe((ledger) => {
+    setLedgerState(ledger);
+    if (ledger.phase === 'committed') {
+      // ページ再読み込み後や、直前の commit がエラー扱いされたケースを含めて復旧する
+      setStatus((prev) => (prev === 'idle' || prev === 'joined' ? 'committed' : prev));
+    }
+  });
+  return () => sub.unsubscribe();
+}, [state$]);
+
+// 2. 呼び出し側: 次のアクションを送る前に、ledger の実際の状態が前提と食い違っていないか確認する
+const reveal = useCallback(async () => {
+  // すでに reveal 待ちの状態でなければ、直前の commit がまだ届いていない可能性がある
+  if (status === 'error') {
+    // 直前の commit は ledger 上では既に反映されている → エラー扱いを覆して先に進める
+    const restored = prevStatusRef.current === 'joined' && ledgerState?.phase === 'committed'
+      ? 'committed'
+      : prevStatusRef.current;
+    setStatus(restored);
+    return;
+  }
+  // ... 通常の reveal 実行
+}, [status, ledgerState]);
+```
+
+**教訓**: Web3 の UI では「操作の成否」を wallet の返り値だけで判定してはいけない。特にトランザクションの結果が Observable な公開状態として取得できる Midnight では、**楽観的ローカル状態は常にオンチェーンの真実で上書き可能にしておく**のが、ウォレット側の一時的な不具合に対する最も堅牢な防御になる。

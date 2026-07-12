@@ -4,7 +4,7 @@ description: Comprehensive guide to writing Compact smart contracts for Midnight
 license: MIT
 metadata:
   author: mashharuki
-  version: "2.2.0"
+  version: "2.3.0"
   compact-toolchain-version: "0.30.0"
   compact-version: "0.20+"
 ---
@@ -397,6 +397,152 @@ export circuit reveal(): Field {
 }
 ```
 
+### Two-Player Commit-Reveal (verified: Rock-Paper-Scissors)
+
+The single-value commit-reveal above generalizes cleanly to a **two-party** game where each
+player has their own secret move and their own witness-derived key, but shares one ledger.
+This exact contract compiled, passed Midnight team review, and is deployed on Preprod/Preview
+(`midnight-rps-sample-app`, `pkgs/contract/src/rps.compact`) — worth using as the template
+whenever a request needs "two players, hidden moves, no third party/oracle, no server":
+
+```compact
+pragma language_version >= 0.16 && <= 0.22;
+
+import CompactStandardLibrary;
+
+export enum GameState  { waiting, committed, finished }
+export enum Move       { rock, paper, scissors }
+export enum GameResult { not_determined, player1_wins, player2_wins, draw }
+
+export ledger state:       GameState;
+export ledger game_over:   Boolean;
+export ledger p1_key:      Bytes<32>;   // derived public key, NOT the wallet address
+export ledger p2_key:      Bytes<32>;
+export ledger p1_joined:   Boolean;
+export ledger p2_joined:   Boolean;
+export ledger p1_commit:   Bytes<32>;   // hash(move, salt) — the move itself stays hidden
+export ledger p2_commit:   Bytes<32>;
+export ledger p1_revealed: Boolean;
+export ledger p2_revealed: Boolean;
+export ledger p1_move:     Move;        // only populated after reveal
+export ledger p2_move:     Move;
+export ledger result:      GameResult;
+
+// Each caller supplies their OWN secret key + move + salt via witnesses — the contract
+// never asks "which player are you", it derives that from who owns which key.
+witness local_secret_key():                        Bytes<32>;
+witness get_my_move():                             Move;
+witness get_my_salt():                              Bytes<32>;
+witness store_move_and_salt(m: Move, s: Bytes<32>): [];
+
+// Derive a stable per-player public key from a secret witness, domain-separated so it
+// can't collide with a hash used elsewhere in the same contract.
+export pure circuit derive_pk(sk: Bytes<32>): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([pad(32, "rps:pk:v1"), sk]);
+}
+
+pure circuit make_commit(m: Move, salt: Bytes<32>): Bytes<32> {
+  const move_bytes = (m as Field) as Bytes<32>;
+  const move_hash  = persistentHash<Vector<1, Bytes<32>>>([move_bytes]);
+  return persistentHash<Vector<2, Bytes<32>>>([move_hash, salt]);
+}
+
+pure circuit who_wins(m1: Move, m2: Move): GameResult {
+  if (m1 == m2) { return GameResult.draw; }
+  if (m1 == Move.rock     && m2 == Move.scissors) { return GameResult.player1_wins; }
+  if (m1 == Move.scissors && m2 == Move.paper)    { return GameResult.player1_wins; }
+  if (m1 == Move.paper    && m2 == Move.rock)     { return GameResult.player1_wins; }
+  return GameResult.player2_wins;
+}
+
+// First caller becomes P1, second becomes P2 — no player-index argument needed.
+// Both players call the SAME circuit; only their private witnesses differ.
+export circuit commit(): [] {
+  assert(!game_over,                "Game is already over");
+  assert(state == GameState.waiting, "Not in waiting state");
+
+  const sk         = local_secret_key();
+  const pk         = derive_pk(sk);
+  const my_move    = get_my_move();
+  const my_salt    = get_my_salt();
+  const commitment = make_commit(my_move, my_salt);
+  store_move_and_salt(my_move, my_salt); // persist locally for the later reveal() call
+
+  if (!p1_joined) {
+    p1_key    = disclose(pk);
+    p1_commit = disclose(commitment);
+    p1_joined = true;
+  } else {
+    assert(!p2_joined, "Both players already committed");
+    p2_key    = disclose(pk);
+    p2_commit = disclose(commitment);
+    p2_joined = true;
+    state     = GameState.committed;
+  }
+}
+
+// Caller identity is re-derived from the same secret key, then matched against
+// p1_key/p2_key to figure out which slot to reveal into.
+export circuit reveal(): [] {
+  assert(!game_over,                   "Game is already over");
+  assert(state == GameState.committed, "Not in committed state");
+
+  const sk       = local_secret_key();
+  const pk       = derive_pk(sk);
+  const my_move  = get_my_move();
+  const my_salt  = get_my_salt();
+  const computed = make_commit(my_move, my_salt);
+
+  const is_p1 = disclose(p1_key == pk);
+  const is_p2 = disclose(p2_key == pk);
+  assert(is_p1 || is_p2, "Caller is not a registered player");
+
+  if (is_p1) {
+    assert(!p1_revealed, "Player 1 already revealed");
+    assert(disclose(computed == p1_commit), "Commitment mismatch for P1");
+    p1_move     = disclose(my_move);
+    p1_revealed = true;
+  }
+  if (is_p2) {
+    assert(!p2_revealed, "Player 2 already revealed");
+    assert(disclose(computed == p2_commit), "Commitment mismatch for P2");
+    p2_move     = disclose(my_move);
+    p2_revealed = true;
+  }
+
+  // Only settle once BOTH reveals are in — this is what prevents the second revealer
+  // from choosing a move after seeing the first reveal (their commitment already fixed
+  // it beforehand; the settlement circuit just can't fire until both are present).
+  if (disclose(p1_revealed && p2_revealed)) {
+    result    = who_wins(p1_move, p2_move);
+    game_over = true;
+    state     = GameState.finished;
+  }
+}
+```
+
+Key design points worth reusing in any "two anonymous parties, hidden simultaneous choice" contract:
+
+- **Identity is derived, not passed in.** Neither circuit takes a `playerId` argument — the
+  caller's own witness-held secret key deterministically produces the same `derive_pk()`
+  output every call, and the contract figures out "who is this" by comparing derived keys
+  against what was stored at commit time. This means the contract never needs to trust a
+  claimed identity.
+- **What gets `disclose()`d is the derived key and the commitment hash — never the raw
+  move.** The move only becomes public (`p1_move`/`p2_move`) inside `reveal()`, and only
+  after the matching commitment is checked. A contract that discloses the move at commit
+  time isn't actually hiding anything and would fail Midnight's privacy requirements.
+  See `rules/privacy-selective-disclosure.md`.
+- **Settlement is gated on both sides being present**, not on the second `reveal()` call
+  specifically — this is what stops player 2 from stalling to see player 1's move before
+  deciding whether to reveal at all (they've already committed, so waiting doesn't let them
+  change their move, only delays the game).
+- **The witness layer (TypeScript) never validates game rules** — `store_move_and_salt`
+  just stores whatever it's given. `commit()`/`reveal()`'s `assert()`s are the only source
+  of truth on legality; the witness is a dumb local key-value store.
+
+---
+
 ### Disclosure in Conditionals
 When branching on witness values, wrap comparisons in `disclose()`:
 
@@ -463,6 +609,7 @@ These contracts compile successfully and demonstrate correct patterns:
 2. **Bulletin Board** (intermediate): `midnightntwrk/example-bboard`
 3. **Naval Battle Game** (advanced): `ErickRomeroDev/naval-battle-game_v2`
 4. **Sea Battle** (advanced): `bricktowers/midnight-seabattle`
+5. **Rock-Paper-Scissors** (two-player commit-reveal, verified in production, Midnight-team-reviewed): `midnight-rps-sample-app` — see the "Two-Player Commit-Reveal" pattern above for the full contract
 
 When in doubt, reference these repos for working syntax.
 

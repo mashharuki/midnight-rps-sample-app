@@ -52,6 +52,33 @@ const getOrCreateInitialState = async (
 };
 ```
 
+### 複数ネットワーク対応時は `privateStateStoreName` をネットワークIDでスコープする
+
+アプリがユーザーにネットワーク切替（例: Preprod / Preview）を許す場合、`privateStateStoreName` を固定文字列のままにすると、**ネットワークをまたいで手・salt などの秘匿状態が混ざる** — 例えば Preprod でコミットした手が Preview 側の private state ストアから読めてしまうことがある（両ネットワークが同じ IndexedDB データベース名を共有するため）。ネットワークIDをキーの一部にしてストアを完全に分離する:
+
+```typescript
+privateStateProvider: levelPrivateStateProvider({
+  privateStoragePasswordProvider: () => 'app-storage-password',
+  accountId: state.coinPublicKey,
+  privateStateStoreName: `${MyPrivateStateId}-${networkId}`, // ← ネットワーク別に分離
+}),
+```
+
+同様に、コントラクトアドレスを `localStorage` に保存する場合も、キーをネットワークIDでスコープしないと「Preprod で保存したコントラクトアドレスが Preview 選択時にも表示される」バグになる:
+
+```typescript
+const contractAddressStorageKey = (networkId: string) => `my-contract-address:${networkId}`;
+```
+
+### Proof Server への直接 fetch が Lace の Service Worker にブロックされる場合
+
+`ProofProvider` に `http://127.0.0.1:6300` を直接渡すと、Lace Wallet の Service Worker がページの fetch をインターセプトしている環境では `ERR_FAILED` になることがある（Service Worker コンテキストから `127.0.0.1` への fetch は Chrome がブロックする）。同一オリジンのパスを Vite dev サーバーでプロキシすることで回避できる — 詳細と本番環境での対処は [`build-config.md`](build-config.md) の「罠その2」を参照。
+
+```typescript
+const proverServerUri = `${window.location.origin}/proof-server`; // 127.0.0.1:6300 への直接 fetch を避ける
+const proofProvider = httpClientProofProvider(proverServerUri, zkConfigProvider);
+```
+
 ## ZkConfigProvider (キャッシュ付き拡張版)
 
 ```typescript

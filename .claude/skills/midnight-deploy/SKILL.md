@@ -10,7 +10,7 @@ description: >
 license: MIT
 metadata:
   author: mashharuki
-  version: "2.0.0"
+  version: "2.1.0"
   midnight-js-version: "4.0.4"
   compact-toolchain-version: "0.30.0"
   reference: "midnightntwrk/example-counter"
@@ -100,6 +100,55 @@ Terminal 2:
 ```bash
 cd counter-cli
 npm run preprod
+```
+
+### Making `*-ps` scripts reuse an already-running proof server
+
+`proof-server.yml` hard-binds host port 6300. If a `*-ps` script always spins up a brand-new `DockerComposeEnvironment` unconditionally, running it twice (or running it while a manually-started proof server is already up) fails on the port conflict instead of just reusing the existing server. Check first with a plain TCP connect probe before deciding whether to start Docker at all:
+
+```typescript
+import net from 'node:net';
+
+export const isProofServerRunning = (proofServerUrl: string): Promise<boolean> => {
+  const { hostname, port } = new URL(proofServerUrl);
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ host: hostname, port: Number(port), timeout: 1000 });
+    socket.once('connect', () => { socket.destroy(); resolve(true); });
+    socket.once('timeout', () => { socket.destroy(); resolve(false); });
+    socket.once('error', () => resolve(false));
+  });
+};
+
+// In the *-ps entrypoint:
+if (await isProofServerRunning(config.proofServer)) {
+  console.log(`Proof server already running at ${config.proofServer}; reusing it.`);
+  await run(config, logger); // no DockerComposeEnvironment needed
+} else {
+  const dockerEnv = new DockerComposeEnvironment(path.resolve(currentDir, '..'), 'proof-server.yml')
+    .withWaitStrategy('proof-server-1', Wait.forLogMessage('Actix runtime found; starting in Actix runtime', 1).withStartupTimeout(300_000));
+  await run(config, logger, dockerEnv);
+}
+```
+
+### Devcontainer / VS Code Remote Containers: proof server unreachable at `127.0.0.1:6300`
+
+When the CLI itself runs inside a devcontainer, `proof-server.yml`'s default bridge network makes the proof server a **sibling** container rather than nested docker-in-docker — from inside the devcontainer, `127.0.0.1:6300` refers to the devcontainer's own loopback, not the proof server's, even though `docker compose up` reports success. Detect the devcontainer (`process.env.REMOTE_CONTAINERS === 'true'`) and use a variant compose file that shares the devcontainer's network namespace instead of the default bridge network:
+
+```yaml
+# proof-server.devcontainer.yml
+services:
+  proof-server:
+    image: "midnightntwrk/proof-server:8.0.3"
+    network_mode: "container:${DEVCONTAINER_HOST_ID}"
+```
+
+```typescript
+export const isDevcontainer = (): boolean => process.env.REMOTE_CONTAINERS === 'true';
+
+const dockerEnv = new DockerComposeEnvironment(
+  path.resolve(currentDir, '..'),
+  isDevcontainer() ? 'proof-server.devcontainer.yml' : 'proof-server.yml',
+).withEnvironment({ DEVCONTAINER_HOST_ID: process.env.HOSTNAME ?? '' });
 ```
 
 ---
@@ -262,6 +311,8 @@ Status meanings:
 | `compact: command not found` | `source $HOME/.local/bin/env` |
 | `connect ECONNREFUSED 127.0.0.1:6300` | Start proof server: `docker compose -f proof-server.yml up` |
 | Proof server hangs on Mac ARM | Docker Desktop → Settings → General → Virtual Machine Options → Docker VMM |
+| `docker compose up` reports success but proof server still unreachable at `127.0.0.1:6300` from inside a devcontainer | You're in a sibling container, not nested docker-in-docker — use a `network_mode: container:<devcontainer id>` compose variant (see "Devcontainer" section above) |
+| `*-ps` script fails to bind port 6300 on second run | A proof server is already running — check with a TCP probe before starting Docker (see "Making `*-ps` scripts reuse" above) instead of always spinning up a new container |
 | `Failed to clone intent` | Known wallet SDK bug — already worked around in example-counter |
 | DUST balance 0 after failed deploy | Restart the app to release locked DUST coins |
 | Wallet shows 0 balance after faucet | Wait for sync; check you sent to the unshielded address |
