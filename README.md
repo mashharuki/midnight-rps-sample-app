@@ -1,6 +1,6 @@
 # midnight-rps-sample-app
 
-Midnight RPS sample dApp
+This project is built on the Midnight Network.
 
 ## Demo Video - YouTube
 
