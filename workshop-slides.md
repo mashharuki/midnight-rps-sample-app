@@ -1,34 +1,36 @@
 ---
 marp: true
-theme: excel
+theme: midnight-dark
 paginate: true
 size: 16:9
 html: true
 style: |
-  /* @theme excel
-     Excel Theme for Marp — Clean, professional presentation design
-     Supports Japanese and English content
+  /* @theme midnight-dark
+     Dark, monochrome-first theme for the Midnight workshop deck.
+     Black & white base with a single violet accent + semantic colors.
   */
 
   /* =========================================
      Base
      ========================================= */
   section {
-    --accent:      #3b82f6;
-    --accent-warm: #f59e0b;
-    --dark:        #0f172a;
-    --dark-2:      #1e293b;
-    --muted:       #64748b;
-    --border:      #e2e8f0;
-    --bg-subtle:   #f8fafc;
+    --accent:      #a78bfa;
+    --accent-warm: #fbbf24;
+    --success:     #34d399;
+    --danger:      #f87171;
+    --dark:        #000000;
+    --dark-2:      #131318;
+    --muted:       #9494a3;
+    --border:      #2b2b35;
+    --bg-subtle:   #131318;
 
     width: 1280px;
     height: 720px;
     box-sizing: border-box;
     font-family: 'Hiragino Sans', 'BIZ UDGothic', 'Yu Gothic Medium',
                  'Noto Sans JP', 'Segoe UI', -apple-system, sans-serif;
-    background: #ffffff;
-    color: #1e293b;
+    background: #08080b;
+    color: #f2f2f5;
     padding: 48px 72px 58px;
     font-size: 24px;
     line-height: 1.65;
@@ -61,7 +63,7 @@ style: |
   h1 {
     font-size: 2.0em;
     font-weight: 800;
-    color: #0f172a;
+    color: #f8f8fa;
     margin: 0 0 14px;
     line-height: 1.2;
     letter-spacing: -0.02em;
@@ -70,7 +72,7 @@ style: |
   h2 {
     font-size: 1.45em;
     font-weight: 700;
-    color: #0f172a;
+    color: #f8f8fa;
     margin: 0 0 18px;
     padding-bottom: 10px;
     border-bottom: 3px solid var(--accent);
@@ -106,11 +108,12 @@ style: |
     border-radius: 4px;
     padding: 1px 6px;
     font-size: 0.82em;
-    color: #be123c;
+    color: #5eead4;
   }
 
   pre {
-    background: #0f172a;
+    background: #000000;
+    border: 1px solid var(--border);
     border-radius: 10px;
     padding: 18px 22px;
     margin: 10px 0;
@@ -120,7 +123,7 @@ style: |
   pre code {
     background: none;
     border: none;
-    color: #e2e8f0;
+    color: #e5e5ea;
     padding: 0;
     font-size: 0.75em;
     line-height: 1.6;
@@ -138,15 +141,16 @@ style: |
 
   th {
     background: var(--accent);
-    color: white;
+    color: #08080b;
     padding: 8px 14px;
     text-align: left;
-    font-weight: 600;
+    font-weight: 700;
   }
 
   td {
     padding: 7px 14px;
     border-bottom: 1px solid var(--border);
+    color: #e5e5ea;
   }
 
   tr:nth-child(even) td { background: var(--bg-subtle); }
@@ -176,7 +180,9 @@ style: |
 
   /* --- title: Cover slide --- */
   section.title {
-    background: linear-gradient(145deg, #0f172a 0%, #1e3a5f 55%, #0f2944 100%);
+    background:
+      radial-gradient(ellipse 60% 50% at 25% 15%, rgba(167,139,250,0.28), transparent 60%),
+      linear-gradient(160deg, #000000 0%, #0a0a10 55%, #000000 100%);
     color: white;
     justify-content: flex-end;
     padding-bottom: 64px;
@@ -202,14 +208,14 @@ style: |
   }
 
   section.title p {
-    color: rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.45);
     font-size: 0.8em;
     margin-top: 28px;
   }
 
   /* --- section: Chapter break slide --- */
   section.section {
-    background: var(--accent);
+    background: linear-gradient(135deg, #5b21b6 0%, #1e1033 65%, #000000 100%);
     color: white;
     justify-content: center;
   }
@@ -248,10 +254,10 @@ style: |
     font-weight: 400;
   }
 
-  /* --- dark: Dark background slide --- */
+  /* --- dark: Deepest-black accent slide (code showcase etc.) --- */
   section.dark {
-    background: #0f172a;
-    color: #e2e8f0;
+    background: #000000;
+    color: #e5e5ea;
   }
 
   section.dark h1 { color: white; }
@@ -262,18 +268,20 @@ style: |
   }
 
   section.dark code {
-    background: #1e293b;
-    border-color: #334155;
-    color: #94a3b8;
+    background: #131318;
+    border-color: #2b2b35;
+    color: #5eead4;
   }
 
-  section.dark td { border-color: #334155; }
-  section.dark tr:nth-child(even) td { background: #1e293b; }
-  section.dark blockquote { background: #1e293b; }
+  section.dark td { border-color: #2b2b35; }
+  section.dark tr:nth-child(even) td { background: #131318; }
+  section.dark blockquote { background: #131318; }
 
   /* --- ending: Thank you / closing slide --- */
   section.ending {
-    background: linear-gradient(145deg, #0f172a 0%, #1e3a5f 100%);
+    background:
+      radial-gradient(ellipse 60% 50% at 75% 85%, rgba(167,139,250,0.25), transparent 60%),
+      linear-gradient(160deg, #000000 0%, #0a0a10 100%);
     color: white;
     justify-content: center;
     align-items: center;
@@ -297,7 +305,7 @@ style: |
   }
 
   section.ending p {
-    color: rgba(255,255,255,0.5);
+    color: rgba(255,255,255,0.45);
     font-size: 0.82em;
     margin-top: 20px;
   }
@@ -327,23 +335,25 @@ style: |
     border-radius: 10px;
     padding: 14px 18px;
     margin: 6px 0;
+    color: #e5e5ea;
   }
 
-  .card.accent  { border-left: 4px solid var(--accent);      background: rgba(59,130,246,0.04); }
-  .card.warn    { border-left: 4px solid var(--accent-warm); background: rgba(245,158,11,0.04); }
-  .card.success { border-left: 4px solid #22c55e;            background: rgba(34,197,94,0.04); }
-  .card.danger  { border-left: 4px solid #ef4444;            background: rgba(239,68,68,0.04); }
+  .card.accent  { border-left: 4px solid var(--accent);      background: rgba(167,139,250,0.08); }
+  .card.warn    { border-left: 4px solid var(--accent-warm); background: rgba(251,191,36,0.08); }
+  .card.success { border-left: 4px solid var(--success);     background: rgba(52,211,153,0.08); }
+  .card.danger  { border-left: 4px solid var(--danger);      background: rgba(248,113,113,0.08); }
 
   /* Highlight box — key messages */
   .highlight {
-    background: linear-gradient(135deg, rgba(59,130,246,0.08), rgba(245,158,11,0.08));
-    border: 1px solid rgba(59,130,246,0.2);
+    background: linear-gradient(135deg, rgba(167,139,250,0.16), rgba(251,191,36,0.08));
+    border: 1px solid rgba(167,139,250,0.35);
     border-radius: 10px;
     padding: 14px 22px;
     font-size: 1.05em;
     font-weight: 600;
     text-align: center;
     margin: 10px 0;
+    color: #f8f8fa;
   }
 
   /* Big number / metric */
@@ -362,9 +372,9 @@ style: |
   .tag {
     display: inline-block;
     background: var(--accent);
-    color: white;
+    color: #08080b;
     font-size: 0.6em;
-    font-weight: 600;
+    font-weight: 700;
     padding: 3px 10px;
     border-radius: 999px;
     vertical-align: middle;
@@ -372,9 +382,9 @@ style: |
     margin: 0 3px;
   }
 
-  .tag.warm    { background: var(--accent-warm); }
-  .tag.success { background: #22c55e; }
-  .tag.danger  { background: #ef4444; }
+  .tag.warm    { background: var(--accent-warm); color: #08080b; }
+  .tag.success { background: var(--success); color: #08080b; }
+  .tag.danger  { background: var(--danger); color: #08080b; }
   .tag.outline { background: none; border: 1.5px solid var(--accent); color: var(--accent); }
 
   /* Icon row — emoji + label */
@@ -412,12 +422,13 @@ style: |
     align-items: flex-start;
     gap: 16px;
     margin: 10px 0;
+    color: #e5e5ea;
   }
   .step::before {
     counter-increment: step;
     content: counter(step);
     background: var(--accent);
-    color: white;
+    color: #08080b;
     font-weight: 700;
     font-size: 0.85em;
     width: 28px;
@@ -428,6 +439,11 @@ style: |
     justify-content: center;
     flex-shrink: 0;
     margin-top: 2px;
+  }
+  .step strong { color: var(--accent); }
+  .step code {
+    background: #08080b;
+    border-color: var(--border);
   }
 ---
 
@@ -601,10 +617,10 @@ circuit commit(move: Field, salt: Field): [] {
 ## コミット・リビール方式 + ZK
 
 <div class="steps">
-<div class="step">**Commit** — 手とsaltをハッシュ化しon-chainに送信（ZK証明つき）</div>
-<div class="step">**待機** — 相手もコミットするまで、手は誰にも分からない</div>
-<div class="step">**Reveal** — 手とsaltを公開し、ハッシュが一致することを検証</div>
-<div class="step">**Settle** — コントラクトが勝敗を判定し記録</div>
+<div class="step"><strong>Commit</strong> — 手とsaltをハッシュ化しon-chainに送信（ZK証明つき）</div>
+<div class="step"><strong>待機</strong> — 相手もコミットするまで、手は誰にも分からない</div>
+<div class="step"><strong>Reveal</strong> — 手とsaltを公開し、ハッシュが一致することを検証</div>
+<div class="step"><strong>Settle</strong> — コントラクトが勝敗を判定し記録</div>
 </div>
 
 ---
@@ -707,9 +723,9 @@ circuit commit(move: Field, salt: Field): [] {
 ## ③ スマートコントラクト：ビルドフロー
 
 <div class="steps">
-<div class="step">`rps.compact` を記述 — ledger／circuit／witnessを定義</div>
-<div class="step">`compactc` でコンパイル — ZK鍵（zkir/keys）+ TypeScript型を生成</div>
-<div class="step">生成物を `managed/rps` として `cli`・`app` 双方にコピー</div>
+<div class="step"><code>rps.compact</code> を記述 — ledger／circuit／witnessを定義</div>
+<div class="step"><code>compactc</code> でコンパイル — ZK鍵（zkir/keys）+ TypeScript型を生成</div>
+<div class="step">生成物を <code>managed/rps</code> として <code>cli</code>・<code>app</code> 双方にコピー</div>
 <div class="step">ネットワーク非依存 — 一度コンパイルすれば全ネットワークで共用</div>
 </div>
 
@@ -824,10 +840,10 @@ Midnight RPS dApp — ZK手役かくしジャンケン
 ## ゲームフロー
 
 <div class="steps">
-<div class="step">**Commit Phase** — 手+saltをハッシュ化してon-chain送信、ZK証明を生成</div>
-<div class="step">**（待機）** — 両者がコミットするまで相手の手は不明</div>
-<div class="step">**Reveal Phase** — 両者が手とsaltを公開し、ハッシュ一致を検証</div>
-<div class="step">**Settlement** — `player1_wins` / `player2_wins` / `draw` を判定し記録</div>
+<div class="step"><strong>Commit Phase</strong> — 手+saltをハッシュ化してon-chain送信、ZK証明を生成</div>
+<div class="step"><strong>（待機）</strong> — 両者がコミットするまで相手の手は不明</div>
+<div class="step"><strong>Reveal Phase</strong> — 両者が手とsaltを公開し、ハッシュ一致を検証</div>
+<div class="step"><strong>Settlement</strong> — <code>player1_wins</code> / <code>player2_wins</code> / <code>draw</code> を判定し記録</div>
 </div>
 
 ---
@@ -861,11 +877,11 @@ Midnight RPS dApp — ZK手役かくしジャンケン
 ## 今日のハンズオンの流れ
 
 <div class="steps">
-<div class="step">**環境構築** — `bun install` / `compact update 0.30.0`</div>
-<div class="step">**コントラクトビルド** — `bun contract compact` → `bun run build`</div>
-<div class="step">**Proof Server起動** — Docker Composeでローカル起動</div>
-<div class="step">**CLIで対戦** — `bun cli preprod-ps` でデプロイ・commit・reveal</div>
-<div class="step">**（余裕があれば）ブラウザ対戦** — 2つのLaceウォレットでリアルタイム対戦</div>
+<div class="step"><strong>環境構築</strong> — <code>bun install</code> / <code>compact update 0.30.0</code></div>
+<div class="step"><strong>コントラクトビルド</strong> — <code>bun contract compact</code> → <code>bun run build</code></div>
+<div class="step"><strong>Proof Server起動</strong> — Docker Composeでローカル起動</div>
+<div class="step"><strong>CLIで対戦</strong> — <code>bun cli preprod-ps</code> でデプロイ・commit・reveal</div>
+<div class="step"><strong>（余裕があれば）ブラウザ対戦</strong> — 2つのLaceウォレットでリアルタイム対戦</div>
 </div>
 
 ---
