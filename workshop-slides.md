@@ -137,6 +137,7 @@ style: |
     width: 100%;
     margin: 10px 0;
     font-size: 0.88em;
+    background: transparent;
   }
 
   th {
@@ -151,6 +152,7 @@ style: |
     padding: 7px 14px;
     border-bottom: 1px solid var(--border);
     color: #e5e5ea;
+    background: #08080b;
   }
 
   tr:nth-child(even) td { background: var(--bg-subtle); }
