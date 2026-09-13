@@ -458,6 +458,10 @@ style: |
 
 ---
 
+![bg](./me.png)
+
+---
+
 ## 本日のゴールとアジェンダ
 
 <div class="highlight">
@@ -890,8 +894,4 @@ Midnight RPS dApp — ZK手役かくしジャンケン
 
 <!-- _class: ending -->
 
-# ありがとうございました
-
-## ご質問はいつでもどうぞ
-
-github.com/mashharuki/midnight-rps-sample-app ・ docs.midnight.network
+# Thank you
