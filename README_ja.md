@@ -48,18 +48,18 @@
 
 ※ Lace Walletについては作成後、しばらく同期する必要があるためセットアップに時間がかかります。
 
-​​- ご自身の端末にVSCodeのインストールすること
-​​- GitHubアカウントの作成
-​​- ご自身の端末にDocker Desktopのインストールすること
-​​- ご自身の端末にBraveブラウザのインストールすること
+​- ご自身の端末にVSCodeのインストールすること
+- GitHubアカウントの作成
+- ご自身の端末にDocker Desktopのインストールすること
+- ご自身の端末にBraveブラウザのインストールすること
 - Braveブラウザに2つ以上のプロファイルを用意すること
   - それぞれのプロファイルでLace Walletを作成しておくこと！
   - ジャンケンには2つプレイヤーのウォレットが必要です
-  - ​​https://www.lace.io/
-​​- testnet faucetを取得しておくこと
+    - ​https://www.lace.io/
+- testnet faucetを取得しておくこと
   - これがないとコントラクトをデプロイしたり、動かしたりすることができません！
-​​  - https://faucet.preprod.midnight.network/
-​​  - https://cloud.google.com/application/web3/
+  - https://faucet.preprod.midnight.network/
+  - https://cloud.google.com/application/web3/
 
 ## 環境情報
 
