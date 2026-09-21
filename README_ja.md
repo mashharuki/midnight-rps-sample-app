@@ -63,6 +63,8 @@
 
 ## 環境情報
 
+> 以下の環境にて動作確認済みです。
+
 ```bash
 Docker version 27.4.0
 compact 0.2.0        # ラッパー CLI（compactc のバージョンを管理）
@@ -120,6 +122,12 @@ node 23.3.0
 
 ## 開発方法
 
+### 自分のGitHubアカウントにこのGitHubリポジトリをクローンしてくる
+
+```bash
+git clone https://github.com/<YOUR_GITHUB_ACCOUNT>/midnight-rps-sample-app
+```
+
 ### Devcontainer を使用する（推奨）
 
 このリポジトリには、事前設定済みの Devcontainer 環境が含まれています。
@@ -155,6 +163,448 @@ bun install
 bun contract compact
 ```
 
+今回は以下のようなスマートコントラクトを使うことになります！
+
+```ts
+pragma language_version >= 0.16 && <= 0.22;
+
+import CompactStandardLibrary;
+
+// ========================================
+// じゃんけんゲームの状態
+// ========================================
+//
+// waiting   : プレイヤーの参加・コミット待ち
+// committed : 2人とも手をコミット済み
+// finished  : 勝敗確定済み
+export enum GameState {
+  waiting,
+  committed,
+  finished
+}
+
+// プレイヤーが選べる手
+export enum Move {
+  rock,
+  paper,
+  scissors
+}
+
+// ゲームの結果
+export enum GameResult {
+  not_determined,
+  player1_wins,
+  player2_wins,
+  draw
+}
+
+// ========================================
+// オンチェーンで管理するゲーム状態
+// ========================================
+
+// 現在のゲーム状態
+export ledger state: GameState;
+
+// ゲームが終了しているか
+export ledger game_over: Boolean;
+
+// Player 1 / Player 2 を識別する公開キー
+//
+// 秘密鍵そのものは公開せず、
+// 秘密鍵から生成した値だけをオンチェーンに保存する。
+export ledger p1_key: Bytes<32>;
+export ledger p2_key: Bytes<32>;
+
+// 各プレイヤーが参加済みかどうか
+export ledger p1_joined: Boolean;
+export ledger p2_joined: Boolean;
+
+// 各プレイヤーのコミットメント
+//
+// 「じゃんけんの手 + salt」から作られたハッシュ値。
+// commit時点では実際の手は公開しない。
+export ledger p1_commit: Bytes<32>;
+export ledger p2_commit: Bytes<32>;
+
+// 各プレイヤーが reveal 済みかどうか
+export ledger p1_revealed: Boolean;
+export ledger p2_revealed: Boolean;
+
+// reveal 後に公開される実際のじゃんけんの手
+export ledger p1_move: Move;
+export ledger p2_move: Move;
+
+// 最終的なゲーム結果
+export ledger result: GameResult;
+
+
+// ========================================
+// Witness
+// ========================================
+//
+// witness はユーザー側のローカル環境から提供される
+// プライベートな値や処理を定義する。
+// これらの値は、そのままオンチェーンには公開されない。
+
+// プレイヤー自身の秘密鍵
+witness local_secret_key(): Bytes<32>;
+
+// プレイヤーが選んだじゃんけんの手
+witness get_my_move(): Move;
+
+// コミットメント作成時に使用するランダムな salt
+//
+// salt を使うことで、
+// rock / paper / scissors のハッシュを総当たりされるのを防ぐ。
+witness get_my_salt(): Bytes<32>;
+
+// 選択した手とsaltをローカルに保存する処理
+//
+// commit後、reveal時に同じ値を使うために保存しておく。
+witness store_move_and_salt(
+  m: Move,
+  s: Bytes<32>
+): [];
+
+
+// ========================================
+// プレイヤー識別用の公開キーを生成
+// ========================================
+//
+// 秘密鍵 sk そのものは公開せず、
+// ハッシュ化した値をプレイヤーIDとして利用する。
+//
+// "rps:pk:v1" はドメイン分離用の固定文字列。
+// 同じ秘密鍵が別用途のハッシュで使われても
+// 衝突しにくくする目的がある。
+export pure circuit derive_pk(
+  sk: Bytes<32>
+): Bytes<32> {
+  return persistentHash<Vector<2, Bytes<32>>>([
+    pad(32, "rps:pk:v1"),
+    sk
+  ]);
+}
+
+
+// ========================================
+// じゃんけんの手のコミットメントを作成
+// ========================================
+//
+// Commit-Reveal方式では、最初に実際の手を公開せず
+// ハッシュ値だけを公開する。
+//
+// commitment = Hash(Hash(move), salt)
+//
+// これにより相手はcommit時点では
+// 自分が何を選んだのか知ることができない。
+pure circuit make_commit(
+  m: Move,
+  salt: Bytes<32>
+): Bytes<32> {
+
+  // enum の Move を Field に変換し、
+  // さらに32byteの値へ変換する。
+  const move_bytes = (m as Field) as Bytes<32>;
+
+  // じゃんけんの手を一度ハッシュ化する。
+  const move_hash =
+    persistentHash<Vector<1, Bytes<32>>>([
+      move_bytes
+    ]);
+
+  // 手のハッシュとsaltを組み合わせて
+  // 最終的なコミットメントを作る。
+  return persistentHash<Vector<2, Bytes<32>>>([
+    move_hash,
+    salt
+  ]);
+}
+
+
+// ========================================
+// 勝敗判定
+// ========================================
+//
+// Player 1 と Player 2 の手を比較し、
+// じゃんけんの結果を返す。
+pure circuit who_wins(
+  m1: Move,
+  m2: Move
+): GameResult {
+
+  // 同じ手なら引き分け
+  if (m1 == m2) {
+    return GameResult.draw;
+  }
+
+  // 以下は Player 1 が勝つケース
+  if (
+    m1 == Move.rock &&
+    m2 == Move.scissors
+  ) {
+    return GameResult.player1_wins;
+  }
+
+  if (
+    m1 == Move.scissors &&
+    m2 == Move.paper
+  ) {
+    return GameResult.player1_wins;
+  }
+
+  if (
+    m1 == Move.paper &&
+    m2 == Move.rock
+  ) {
+    return GameResult.player1_wins;
+  }
+
+  // 上記以外は Player 2 の勝ち
+  return GameResult.player2_wins;
+}
+
+
+// ========================================
+// Commitフェーズ
+// ========================================
+//
+// プレイヤーはここでじゃんけんの手を選択するが、
+// 実際の手はまだ公開しない。
+//
+// 公開されるのは
+//
+//   Hash(move + salt)
+//
+// に相当するコミットメントだけ。
+//
+// これにより、後から手を変更することも、
+// 相手の手を先に確認することも防げる。
+export circuit commit(): [] {
+
+  // すでにゲームが終了していたら実行不可
+  assert(
+    !game_over,
+    "Game is already over"
+  );
+
+  // commit可能なのは waiting 状態のみ
+  assert(
+    state == GameState.waiting,
+    "Not in waiting state"
+  );
+
+  // ローカル環境から秘密鍵を取得
+  const sk = local_secret_key();
+
+  // 秘密鍵からプレイヤー識別用の公開キーを生成
+  const pk = derive_pk(sk);
+
+  // ユーザーが選択したじゃんけんの手
+  const my_move = get_my_move();
+
+  // ランダムなsalt
+  const my_salt = get_my_salt();
+
+  // 手とsaltからコミットメントを作成
+  const commitment =
+    make_commit(my_move, my_salt);
+
+  // reveal時に必要なので、
+  // 手とsaltをローカルに保存しておく
+  store_move_and_salt(
+    my_move,
+    my_salt
+  );
+
+
+  // ========================================
+  // Player 1 の登録
+  // ========================================
+
+  if (!p1_joined) {
+
+    // disclose() を使うことで、
+    // ZK回路内部の値を明示的に公開する。
+    //
+    // 秘密鍵 sk 自体は公開せず、
+    // derive_pk(sk) の結果だけを公開する。
+    p1_key = disclose(pk);
+
+    // 実際の手ではなく
+    // コミットメントだけを公開する。
+    p1_commit = disclose(commitment);
+
+    p1_joined = true;
+
+  } else {
+
+    // ========================================
+    // Player 2 の登録
+    // ========================================
+
+    // すでにPlayer 2まで参加している場合は拒否
+    assert(
+      !p2_joined,
+      "Both players already committed"
+    );
+
+    p2_key = disclose(pk);
+    p2_commit = disclose(commitment);
+
+    p2_joined = true;
+
+    // 2人ともcommitしたので
+    // revealフェーズへ移行する。
+    state = GameState.committed;
+  }
+}
+
+
+// ========================================
+// Revealフェーズ
+// ========================================
+//
+// commit時に使用した
+//
+//   move
+//   salt
+//
+// を使ってコミットメントを再計算する。
+//
+// 再計算した値がオンチェーン上のcommitmentと
+// 一致することを確認することで、
+//
+// 「commit後に手を変更していない」
+//
+// ことを検証する。
+export circuit reveal(): [] {
+
+  // ゲーム終了後はreveal不可
+  assert(
+    !game_over,
+    "Game is already over"
+  );
+
+  // 2人ともcommit済みでなければreveal不可
+  assert(
+    state == GameState.committed,
+    "Not in committed state"
+  );
+
+  // ローカル秘密鍵
+  const sk = local_secret_key();
+
+  // 自分のプレイヤーIDを再生成
+  const pk = derive_pk(sk);
+
+  // commit時に選択した手
+  const my_move = get_my_move();
+
+  // commit時に使用したsalt
+  const my_salt = get_my_salt();
+
+  // move + salt からcommitmentを再計算
+  const computed =
+    make_commit(my_move, my_salt);
+
+
+  // ========================================
+  // 自分がどちらのプレイヤーか確認
+  // ========================================
+
+  const is_p1 =
+    disclose(p1_key == pk);
+
+  const is_p2 =
+    disclose(p2_key == pk);
+
+  // 登録済みのPlayer 1またはPlayer 2以外は
+  // revealできない。
+  assert(
+    is_p1 || is_p2,
+    "Caller is not a registered player"
+  );
+
+
+  // ========================================
+  // Player 1 の Reveal
+  // ========================================
+
+  if (is_p1) {
+
+    // 二重revealを防止
+    assert(
+      !p1_revealed,
+      "Player 1 already revealed"
+    );
+
+    // commit時のcommitmentと、
+    // 今回再計算したcommitmentが一致するか確認
+    //
+    // 一致しない場合、
+    // move または salt がcommit時と異なる。
+    assert(
+      disclose(computed == p1_commit),
+      "Commitment mismatch for P1"
+    );
+
+    // 検証に成功したので
+    // 実際の手を公開する。
+    p1_move = disclose(my_move);
+
+    p1_revealed = true;
+  }
+
+
+  // ========================================
+  // Player 2 の Reveal
+  // ========================================
+
+  if (is_p2) {
+
+    assert(
+      !p2_revealed,
+      "Player 2 already revealed"
+    );
+
+    assert(
+      disclose(computed == p2_commit),
+      "Commitment mismatch for P2"
+    );
+
+    p2_move = disclose(my_move);
+
+    p2_revealed = true;
+  }
+
+
+  // ========================================
+  // 2人ともReveal済みなら勝敗判定
+  // ========================================
+
+  if (
+    disclose(
+      p1_revealed &&
+      p2_revealed
+    )
+  ) {
+
+    // 公開された2人の手から勝敗を決定
+    result =
+      who_wins(
+        p1_move,
+        p2_move
+      );
+
+    // ゲーム終了
+    game_over = true;
+
+    state = GameState.finished;
+  }
+}
+```
+
 次に、すべての TypeScript パッケージをビルドします（contract → ZK キー同期 → shared → CLI → app）。
 
 ```bash
@@ -170,6 +620,8 @@ bun run build
 5. `pkgs/app` — Vite によるビルド
 
 ### Proof Server を起動する
+
+> Proof Serverはコントラクトのデプロイやコントラクトのメソッドを実行するのに必要です。
 
 ```bash
 docker compose -f pkgs/cli/proof-server.yml up
