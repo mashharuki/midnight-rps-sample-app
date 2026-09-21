@@ -2,6 +2,9 @@
 
 このプロジェクトは Midnight Network 上に構築されています。
 
+> [!CAUTION]
+> このワークショップで作成したウォレットおよび生成した秘密鍵はメインネットでは絶対に使わないようにしてください！
+
 ## デモ動画 - YouTube
 
 [![サービス紹介動画](https://github.com/user-attachments/assets/e432744b-5752-4232-8e81-d8aab4451b07)](https://youtu.be/jmUyDCOBVCY)
@@ -718,6 +721,8 @@ bun cli preview
 ```bash
 bun cli preview-ps
 ```
+
+デプロイ時に新しくウォレットを作成するか秘密鍵をインポートするかを聞かれるので「秘密鍵をインポートする」を選択して秘密鍵はLace Walletに作成したものを貼り付けてください(Lace Walletから秘密鍵を取得しておいてください)。
 
 デプロイ済みコントラクトアドレス情報（Preview Network）
 
